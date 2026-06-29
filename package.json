@@ -1,0 +1,19 @@
+{
+  "name": "pasaje-dental-ubicaciones",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Sistema de ubicaciones, stock y consultas para El Pasaje Dental",
+  "scripts": {
+    "start": "node app/server.mjs",
+    "sync": "node scripts/sync.mjs",
+    "migrar": "node scripts/migrar-wc.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "pg": "^8.13.3"
+  }
+}

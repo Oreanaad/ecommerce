@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>El Pasaje Dental · Panel interno</title>
+  <link rel="icon" type="image/png" href="/assets/favicon.png?v=2"><link rel="icon" sizes="32x32" href="/assets/favicon-32.png?v=2"><link rel="apple-touch-icon" href="/assets/apple-touch-icon.png?v=2">
+  <link rel="stylesheet" href="/style.css?v=88" />
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <img src="/assets/logo.png" alt="El Pasaje Dental" class="brand-logo">
+      <span class="sub">Panel interno</span>
+      <span class="usuario-actual" id="usuario-actual"></span>
+      <button id="btn-sync" class="btn ghost sm" title="Traer precios y stock actualizados de la web">↻ Actualizar stock</button>
+      <a href="/tienda" target="_blank" rel="noopener" class="btn ghost sm" title="Abrir la tienda pública en otra pestaña">🛍️ Ver tienda</a>
+      <button id="btn-salir" class="btn ghost sm" title="Cerrar sesión">Cerrar sesión</button>
+    </div>
+    <nav class="tabs">
+      <button class="tab active" data-tab="stats">📊 Estadísticas</button>
+      <button class="tab" data-tab="finanzas">💰 Finanzas</button>
+      <div class="tabgroup">
+        <button class="tabg-btn" type="button">🛒 Ventas ▾</button>
+        <div class="tabg-menu">
+          <button class="tab" data-tab="pedidos">📦 Pedidos</button>
+          <button class="tab" data-tab="venta">🛒 Nueva venta</button>
+          <button class="tab" data-tab="reparto">🛵 Reparto</button>
+          <button class="tab" data-tab="preguntar">💬 Preguntar</button>
+        </div>
+      </div>
+      <div class="tabgroup">
+        <button class="tabg-btn" type="button">👥 Clientes ▾</button>
+        <div class="tabg-menu">
+          <button class="tab" data-tab="clientes">👥 Clientes</button>
+          <button class="tab" data-tab="solicitudes">💡 Sugerencias</button>
+          <button class="tab" data-tab="encargos">🔔 Encargos</button>
+        </div>
+      </div>
+      <div class="tabgroup">
+        <button class="tabg-btn" type="button">📦 Catálogo ▾</button>
+        <div class="tabg-menu">
+          <button class="tab" data-tab="buscar">🔍 Producto</button>
+          <button class="tab" data-tab="carga">⚡ Carga rápida</button>
+          <button class="tab" data-tab="transferir">🔀 Transferir</button>
+          <button class="tab" data-tab="piedras">🪨 Piedras</button>
+          <button class="tab" data-tab="inventario">📋 Inventario</button>
+          <button class="tab" data-tab="foto">📷 Recibir mercadería</button>
+          <button class="tab" data-tab="vencimientos">⏰ Vencimientos</button>
+          <button class="tab" data-tab="muebles">🗄️ Muebles</button>
+          <button class="tab" data-tab="mapa">🗺️ Mapa</button>
+        </div>
+      </div>
+      <div class="tabgroup">
+        <button class="tabg-btn" type="button">📣 Marketing ▾</button>
+        <div class="tabg-menu">
+          <button class="tab" data-tab="promos">🎟️ Cupones</button>
+          <button class="tab" data-tab="redes">📸 Redes</button>
+          <button class="tab" data-tab="campanas">📣 Campañas</button>
+          <button class="tab" data-tab="ml">🛒 MercadoLibre</button>
+        </div>
+      </div>
+      <button class="tab" data-tab="ajustes">⚙️ Ajustes</button>
+    </nav>
+  </header>
+
+  <main>
+    <!-- ESTADÍSTICAS (principal) -->
+    <section id="tab-stats" class="panel active">
+      <div class="stats-bar">
+        <label class="stats-mes-lbl">Mes <input type="month" id="stats-mes"></label>
+        <button class="btn ghost sm" id="stats-reload">↻ Actualizar</button>
+        <span class="meta" id="stats-meta"></span>
+      </div>
+      <div class="stats-cards" id="stats-cards"></div>
+      <div class="stats-chart"><canvas id="stats-canvas" height="120"></canvas></div>
+    </section>
+
+    <!-- FINANZAS -->
+    <section id="tab-finanzas" class="panel">
+      <nav class="fin-nav" id="fin-nav"></nav>
+      <div id="fin-app"></div>
+    </section>
+
+    <!-- PEDIDOS -->
+    <section id="tab-pedidos" class="panel">
+      <div class="ped-bar">
+        <input id="ped-q" type="search" placeholder="Cliente o N° de pedido…" autocomplete="off">
+        <select id="ped-estado">
+          <option value="any">Todos los estados</option>
+          <option value="processing">En proceso</option>
+          <option value="pending">Pendiente de pago</option>
+          <option value="on-hold">En espera</option>
+          <option value="completed">Completado</option>
+          <option value="cancelled">Cancelado</option>
+        </select>
+        <label class="ped-fecha">Desde <input id="ped-desde" type="date"></label>
+        <label class="ped-fecha">Hasta <input id="ped-hasta" type="date"></label>
+        <button class="btn sm" id="ped-buscar">Buscar</button>
+        <button class="btn ghost sm" id="ped-actualizar">↻ Actualizar</button>
+        <button class="btn ghost sm" id="ped-recargar">Limpiar</button>
+        <label class="chk"><input type="checkbox" id="ped-cancelados"> Ver cancelados</label>
+        <span class="meta" id="ped-meta"></span>
+      </div>
+      <div id="ped-lista" class="ped-lista"></div>
+    </section>
+
+    <!-- NUEVA VENTA (POS) -->
+    <section id="tab-venta" class="panel">
+      <div class="venta-grid">
+        <div class="venta-col">
+          <h3>🛒 Productos</h3>
+          <input id="vt-buscar" class="vt-input" placeholder="Buscar producto por nombre o código…" autocomplete="off">
+          <div id="vt-resultados" class="vt-resultados"></div>
+          <div id="vt-cart"></div>
+        </div>
+        <div class="venta-col">
+          <h3>👤 Cliente</h3>
+          <input id="vt-cli-q" class="vt-input" placeholder="Teléfono, email o nombre…" autocomplete="off">
+          <div id="vt-cli-sug" class="vt-cli-sug"></div>
+          <div id="vt-cli-sel"></div>
+          <div id="vt-resto"></div>
+        </div>
+      </div>
+      <div id="vt-presupuestos" class="vt-presupuestos"></div>
+    </section>
+
+    <!-- REPARTO -->
+    <section id="tab-reparto" class="panel">
+      <div class="ped-bar">
+        <button class="btn" id="rep-ruta">🗺️ Abrir ruta en Google Maps</button>
+        <label class="ped-fecha">Desde <input id="rep-desde" type="date"></label>
+        <label class="ped-fecha">Hasta <input id="rep-hasta" type="date"></label>
+        <button class="btn ghost sm" id="rep-limpiar">Limpiar</button>
+        <button class="btn ghost sm" id="rep-recargar">↻ Recargar</button>
+        <button class="btn ghost sm" id="rep-mandado-btn">➕ Mandado</button>
+        <span class="meta" id="rep-meta"></span>
+      </div>
+      <div id="rep-mandado-box" class="rep-mandado-box" hidden>
+        <input id="rep-md-detalle" placeholder="Qué tiene que hacer (ej: pagar Edet, ir al correo)">
+        <input id="rep-md-dir" placeholder="Dirección (opcional)">
+        <input id="rep-md-tel" placeholder="Teléfono (opcional)">
+        <button class="btn sm" id="rep-md-add">Agregar al reparto</button>
+      </div>
+      <div id="rep-app"></div>
+    </section>
+
+    <!-- BUSCAR -->
+    <section id="tab-buscar" class="panel">
+      <div class="search-bar">
+        <input id="q" type="search" placeholder="Buscar por nombre, código o marca…" autocomplete="off" />
+        <select id="cat"><option value="">Todas las categorías</option></select>
+        <select id="venc-filtro" title="Filtrar por vencimiento">
+          <option value="">Vencimiento: todos</option>
+          <option value="por_vencer">⏰ Próximos a vencer</option>
+          <option value="vencido">⚠️ Ya vencidos</option>
+          <option value="con_fecha">Con vencimiento cargado</option>
+        </select>
+        <label class="chk"><input type="checkbox" id="soloStock" /> Solo con stock</label>
+        <label class="chk"><input type="checkbox" id="soloUbicados" /> Solo ubicados</label>
+        <button class="btn sm" id="btn-nuevo-prod">➕ Nuevo producto</button>
+      </div>
+      <div id="search-meta" class="meta"></div>
+      <div id="resultados" class="cards"></div>
+    </section>
+
+    <!-- CARGA RAPIDA -->
+    <section id="tab-carga" class="panel">
+      <div class="carga-head">
+        <p class="meta">Elegí dónde vas a cargar. Buscá el producto <b>por descripción o código</b> (sirve para los que todavía no tienen el código pegado), Enter para elegirlo, poné la <b>cantidad</b> y Enter de nuevo para cargar. Ideal entre dos: uno dicta, otro carga.</p>
+        <div class="carga-selects">
+          <select id="carga-mueble"></select>
+          <select id="carga-slot"></select>
+          <input id="carga-nota" placeholder="Nota para todos (opcional)" />
+        </div>
+        <label class="carga-modo-inv"><input type="checkbox" id="carga-modo-inv"> 📋 <b>Modo inventario</b> <span class="meta">— al cargar <b>reemplaza</b> la cantidad de la ubicación (no suma). Usalo para el conteo general; apagalo para recibir mercadería.</span></label>
+        <div class="carga-input-wrap">
+          <div class="carga-search">
+            <input id="carga-codigo" placeholder="🔎 Descripción o código… (Enter para elegir)" autocomplete="off" />
+            <div id="carga-res" class="carga-res"></div>
+          </div>
+          <input id="carga-cant" type="number" min="1" placeholder="cant" inputmode="numeric" class="carga-cant" />
+          <label class="carga-venc-l">⏰ Vence <input id="carga-venc" type="text" inputmode="numeric" autocomplete="off" placeholder="mm/aaaa (ej. 12/2030 o 12/30)" /></label>
+          <span id="carga-contador" class="contador">0 cargados</span>
+        </div>
+        <div id="carga-sel" class="carga-sel"></div>
+        <p class="meta" style="margin-top:2px">Todo con <b>Enter</b>: <b>1)</b> buscás → Enter elige · <b>2)</b> cantidad → Enter · <b>3)</b> fecha de venc. (opcional) → Enter <b>carga</b>. El mueble y la cantidad se mantienen; la fecha se limpia para el siguiente.</p>
+        <div id="carga-feedback" class="carga-feedback"></div>
+      </div>
+      <div id="carga-yacargado" class="carga-yacargado"></div>
+    </section>
+
+    <!-- TRANSFERIR (mover mercadería de un lugar a otro) -->
+    <section id="tab-transferir" class="panel">
+      <div class="tr-bar">
+        <label class="tr-sel">📤 Origen <select id="tr-origen"></select></label>
+        <span class="tr-arrow">→</span>
+        <label class="tr-sel">📥 Destino <select id="tr-destino"></select></label>
+        <button class="btn" id="tr-go">🔀 Transferir</button>
+      </div>
+      <div id="tr-fb" class="carga-feedback"></div>
+      <p class="meta">Elegí el <b>origen</b>, tildá lo que querés pasar (y cuánto), elegí el <b>destino</b> y dale Transferir. Mueve cantidades entre ubicaciones y <b>arrastra los vencimientos</b> (los más próximos a vencer primero en pases parciales). No toca el stock total de WooCommerce.</p>
+      <div id="tr-lista"></div>
+    </section>
+
+    <!-- PIEDRAS (conteo rápido para el Mostrador de piedras) -->
+    <section id="tab-piedras" class="panel">
+      <div class="pied-topbar">
+        <b>🪨 Mostrador de piedras — conteo rápido</b>
+        <input id="piedras-q" type="search" placeholder="Filtrar por nombre o código…" autocomplete="off">
+        <button class="btn ghost sm" id="piedras-reload" title="Recargar cantidades">↻</button>
+        <span class="meta" id="piedras-total"></span>
+      </div>
+      <p class="meta">Cargá la cantidad de cada fresa Jota y cada piedra Microdont. Se guarda solo en <b>Escritorio · Mostrador de piedras</b> (reemplaza la cantidad, no suma).</p>
+      <div id="piedras-list"></div>
+    </section>
+
+    <!-- INVENTARIO (reconciliación contado vs WooCommerce) -->
+    <section id="tab-inventario" class="panel">
+      <p class="meta">Compará lo que <b>contaste por ubicación</b> contra el <b>stock de WooCommerce</b> y corregí donde haya diferencia. Andá contando lugar por lugar en <b>Carga rápida</b> (con cantidad) y acá lo vas ajustando. Lo ideal: ajustar en momentos de poco movimiento.</p>
+      <div class="inv-bar">
+        <input id="inv-q" type="search" placeholder="Buscar producto o código…" autocomplete="off">
+        <label class="chk"><input type="checkbox" id="inv-solo-dif" checked> Solo con diferencia</label>
+        <button class="btn ghost sm" id="inv-recargar">↻ Actualizar</button>
+        <button class="btn sm" id="inv-ajustar-todos">✓ Ajustar todos los que difieren</button>
+        <button class="btn ghost sm" id="inv-reset" title="Pone en blanco todas las cantidades contadas por ubicación, para arrancar un inventario desde cero. Guarda un backup antes. No toca el stock de WooCommerce.">🧹 Reiniciar conteo</button>
+        <button class="btn ghost sm" id="inv-restaurar" title="Deshace el reinicio: vuelve las cantidades por ubicación al último backup">🔄 Restaurar conteo</button>
+      </div>
+      <div id="inv-resumen" class="inv-resumen"></div>
+      <div id="inv-lista" class="inv-lista"></div>
+    </section>
+
+    <!-- PREGUNTAR -->
+    <section id="tab-preguntar" class="panel">
+      <p class="meta">Preguntá en lenguaje natural sobre los productos: qué tenés para algo, para qué sirve, dónde está. El asistente usa tu stock y, si falta info, busca en internet.</p>
+      <div class="preg-bar">
+        <input id="preg-q" type="text" placeholder="Ej: un cliente quiere algo para pulir composite, ¿qué tengo?" autocomplete="off" />
+        <button class="btn" id="preg-enviar">Preguntar</button>
+      </div>
+      <div class="sugerencias">
+        <button class="chip-sug">¿Dónde están los conos de gutta?</button>
+        <button class="chip-sug">¿Qué tengo para aislación absoluta?</button>
+        <button class="chip-sug">¿Para qué sirve el alginato?</button>
+      </div>
+      <div id="preg-respuesta" class="preg-respuesta"></div>
+    </section>
+
+    <!-- MAPA -->
+    <section id="tab-mapa" class="panel">
+      <p class="meta">Plano del local (posiciones provisorias). Tocá un mueble para ver su forma interna y qué hay en cada lugar. <strong>Mandame el dibujo del local y lo ajusto a la realidad.</strong></p>
+      <div id="mapa-cont" class="mapa-cont"></div>
+    </section>
+
+    <!-- MUEBLES -->
+    <section id="tab-muebles" class="panel">
+      <div id="muebles-list"></div>
+    </section>
+
+    <!-- VENCIMIENTOS -->
+    <section id="tab-vencimientos" class="panel">
+      <div id="venc-app"></div>
+    </section>
+
+    <!-- FOTO -->
+    <section id="tab-foto" class="panel">
+      <div id="recibir-app"></div>
+    </section>
+
+    <!-- MERCADOLIBRE -->
+    <section id="tab-ml" class="panel">
+      <div id="ml-estado" class="ml-box"><p class="meta">Cargando estado…</p></div>
+    </section>
+
+    <!-- AJUSTES -->
+    <section id="tab-ajustes" class="panel">
+      <div class="aj-box">
+        <h3>Precios y medios de pago</h3>
+        <label class="aj-field">
+          <span>Recargo para medios que no sean <strong>transferencia ni efectivo</strong> (%)</span>
+          <div class="aj-input"><input id="aj-recargo" type="number" min="0" max="100" step="0.5" inputmode="decimal"> <span>%</span></div>
+        </label>
+        <p class="meta">En la tienda se muestran los <strong>dos precios</strong>: el de transferencia/efectivo y el de otros medios (con este recargo). Poné <strong>0</strong> para mostrar un solo precio.</p>
+        <hr class="aj-sep">
+        <h3>Envío en Tucumán</h3>
+        <label class="aj-field">
+          <span>Costo de envío fijo en Tucumán ($)</span>
+          <div class="aj-input"><span>$</span> <input id="aj-tuc-fijo" type="number" min="0" step="1" inputmode="numeric"></div>
+        </label>
+        <label class="aj-field">
+          <span>Envío <strong>gratis</strong> en Tucumán a partir de ($) — 0 = nunca gratis</span>
+          <div class="aj-input"><span>$</span> <input id="aj-tuc-gratis" type="number" min="0" step="1" inputmode="numeric"></div>
+        </label>
+        <p class="meta">Para envíos dentro de Tucumán se cobra el monto fijo, salvo que la compra llegue al mínimo de envío gratis. Fuera de Tucumán se sigue calculando con Andreani.</p>
+        <hr class="aj-sep">
+        <h3>⏰ Vencimientos</h3>
+        <label class="aj-field">
+          <span>Avisar cuando falten <strong>X días o menos</strong> para vencer</span>
+          <div class="aj-input"><input id="aj-venc-dias" type="number" min="1" step="1" inputmode="numeric"> <span>días</span></div>
+        </label>
+        <p class="meta">Define qué productos aparecen como <strong>"próximos a vencer"</strong> en el filtro de Buscar. Los ya vencidos se marcan aparte.</p>
+        <hr class="aj-sep">
+        <h3>🧾 Facturación electrónica (ARCA) — Emisores</h3>
+        <div id="aj-emisores"></div>
+        <button type="button" class="btn ghost sm" id="aj-add-emisor">+ Agregar emisor (CUIT)</button>
+        <label class="aj-field" style="margin-top:12px"><span>Ambiente</span><div class="aj-input"><select id="aj-amb"><option value="produccion">Producción</option><option value="homologacion">Homologación (prueba)</option></select></div></label>
+        <p class="meta">Cada emisor (monotributo) tiene su CUIT y punto de venta. El certificado de cada uno se carga aparte (variable segura en el servidor: <code>AFIP_CERT_&lt;cuit&gt;</code>).</p>
+        <hr class="aj-sep">
+        <h3>🤖 Descripciones con IA</h3>
+        <p class="meta" id="desc-estado">Cargando…</p>
+        <button type="button" class="btn ghost sm" id="desc-generar" style="display:none">✨ Generar descripciones faltantes</button>
+        <span class="meta" id="desc-progreso"></span>
+        <p class="meta">Genera descripciones para los productos que no tienen, mejorando SEO y conversión. No modifica WooCommerce: si después cargás una descripción ahí, esa tiene prioridad.</p>
+        <hr class="aj-sep">
+        <h3>📢 Banner promocional (home + tienda)</h3>
+        <p class="meta">Mostralo solo en momentos puntuales (ej. un código para el fin de semana). Mientras esté <strong>desactivado no se ve nada</strong> en la web; lo prendés y apagás cuando quieras.</p>
+        <label class="chk"><input type="checkbox" id="pr-activo"> Mostrar el banner ahora</label>
+        <input class="aj-promo-in" id="pr-texto" placeholder="Texto (ej: 10% OFF este finde comprando por la web 🎉)">
+        <input class="aj-promo-in" id="pr-codigo" placeholder="Código a mostrar (ej: FINDE10) — opcional">
+        <label class="aj-field"><span>Mostrar hasta (opcional)</span><div class="aj-input"><input id="pr-hasta" type="date"></div></label>
+        <button type="button" class="btn ghost sm" id="pr-guardar">Guardar banner</button> <span class="meta" id="pr-msg"></span>
+        <hr class="aj-sep">
+        <h3>🔐 Copia de seguridad</h3>
+        <a class="btn ghost sm" href="/api/admin/backup" download>⬇️ Descargar backup de los datos</a>
+        <p class="meta">Baja ubicaciones, clientes, finanzas, facturas, vencimientos, prospectos y descripciones en un archivo. Guardalo cada tanto por las dudas.</p>
+        <hr class="aj-sep">
+        <button class="btn" id="aj-guardar">💾 Guardar ajustes</button>
+        <span class="meta" id="aj-msg"></span>
+      </div>
+    </section>
+
+    <!-- CLIENTES -->
+    <section id="tab-clientes" class="panel">
+      <div class="cli-bar">
+        <button class="btn sm" id="cli-imp-wp">⬇️ Importar de WordPress (claves)</button>
+        <button class="btn ghost sm" id="cli-imp-woo">⬇️ Importar de WooCommerce</button>
+        <input id="cli-q" type="search" placeholder="Buscar email o nombre…" autocomplete="off" />
+        <label class="chk"><input type="checkbox" id="cli-spam" /> Ver spam/bots</label>
+        <span class="meta" id="cli-meta"></span>
+      </div>
+      <div id="cli-lista" class="cli-lista"></div>
+    </section>
+
+    <!-- SOLICITUDES -->
+    <section id="tab-solicitudes" class="panel">
+      <div class="solic-nueva">
+        <h3>💡 Nueva sugerencia</h3>
+        <p class="meta">Mandá una idea, mejora o cambio para el sistema. El dueño la aprueba (y se construye) o la rechaza. Cuando esté lista, te avisa y confirmás que quedó OK. <b>Cada uno ve solo las suyas.</b></p>
+        <input id="sol-titulo" placeholder="Título corto (qué necesitás)" autocomplete="off">
+        <textarea id="sol-detalle" rows="3" placeholder="Detalle: explicá bien qué querés que haga…"></textarea>
+        <button class="btn" id="sol-enviar">Enviar sugerencia</button>
+      </div>
+      <div class="solic-bar"><button class="btn ghost sm" id="sol-reload">↻ Actualizar</button><label class="chk"><input type="checkbox" id="sol-ver-conf"> Ver confirmadas</label><span class="meta" id="sol-meta"></span></div>
+      <div id="sol-lista" class="solic-lista"></div>
+    </section>
+
+    <!-- ENCARGOS / ALERTAS -->
+    <section id="tab-encargos" class="panel">
+      <div class="solic-nueva">
+        <h3>🔔 Nuevo encargo</h3>
+        <p class="meta">Cuando un cliente pide que le traigamos algo, anotalo acá. Al llegar la mercadería, marcás "llegó" y le avisás por WhatsApp.</p>
+        <input id="enc-cliente" placeholder="Cliente *" autocomplete="off">
+        <input id="enc-tel" placeholder="Teléfono / WhatsApp (para avisarle)" inputmode="tel">
+        <div id="enc-sug" class="nc-sug"></div>
+        <input id="enc-producto" placeholder="Qué pidió *" autocomplete="off">
+        <textarea id="enc-nota" rows="2" placeholder="Detalle / cantidad / marca (opcional)"></textarea>
+        <button class="btn" id="enc-enviar">Anotar encargo</button>
+      </div>
+      <div class="solic-bar">
+        <button class="btn ghost sm" id="enc-reload">↻ Actualizar</button>
+        <label class="chk"><input type="checkbox" id="enc-ver-avisados"> Ver avisados</label>
+        <span class="meta" id="enc-meta"></span>
+      </div>
+      <div id="enc-lista" class="solic-lista"></div>
+    </section>
+
+    <!-- REDES (generador de imágenes) -->
+    <section id="tab-redes" class="panel">
+      <h3>📸 Imagen para redes (Instagram / WhatsApp)</h3>
+      <p class="meta">Elegí productos y armá una imagen lista para postear o mandar (con fotos, precios y datos del local).</p>
+      <div class="redes-bar">
+        <input id="rd-buscar" placeholder="🔎 Buscar producto para agregar…" autocomplete="off">
+        <div id="rd-res" class="rd-res"></div>
+      </div>
+      <div class="redes-random">
+        <span class="meta">O cargá productos al azar (con stock):</span>
+        <button class="btn ghost sm" id="rd-rand6">🎲 6 al azar</button>
+        <button class="btn ghost sm" id="rd-rand20">🎲 20 al azar (catálogo)</button>
+        <button class="btn ghost sm" id="rd-clear">🗑️ Vaciar</button>
+      </div>
+      <div id="rd-sel" class="rd-sel"></div>
+      <div class="redes-cfg">
+        <label>Formato <select id="rd-formato"><option value="historia">Historia / Story (9:16)</option><option value="post">Post / Feed (1:1)</option><option value="pdf">Catálogo PDF (hasta 30)</option></select></label>
+        <label>Título <input id="rd-titulo" value="¡Mirá lo que tenemos!"></label>
+        <button class="btn" id="rd-generar">🎨 Generar imagen</button>
+        <button class="btn ghost" id="rd-descargar" disabled>⬇️ Descargar</button>
+        <span class="meta" id="rd-msg"></span>
+      </div>
+      <div id="rd-canvas-wrap" class="rd-canvas-wrap"></div>
+    </section>
+
+    <!-- CUPONES -->
+    <section id="tab-promos" class="panel">
+      <div class="solic-nueva">
+        <h3>🎟️ Nuevo cupón de descuento</h3>
+        <p class="meta">Se crea directo en WooCommerce y ya funciona en el checkout de la tienda.</p>
+        <input id="cp-code" placeholder="Código (ej: FINDE10)" autocomplete="off">
+        <div class="prx2">
+          <label>Tipo <select id="cp-tipo"><option value="percent">Porcentaje %</option><option value="fixed_cart">Monto fijo $</option></select></label>
+          <label>Valor <input id="cp-monto" inputmode="numeric" placeholder="10"></label>
+          <label>Vence <input id="cp-vence" type="date"></label>
+        </div>
+        <div class="prx2">
+          <label>Compra mínima $ <input id="cp-min" inputmode="numeric" placeholder="opcional"></label>
+          <label>Límite de usos <input id="cp-limite" inputmode="numeric" placeholder="opcional"></label>
+        </div>
+        <button class="btn" id="cp-crear">Crear cupón</button> <span class="meta" id="cp-msg"></span>
+      </div>
+      <div class="solic-bar"><button class="btn ghost sm" id="cp-reload">↻ Actualizar</button><span class="meta" id="cp-meta"></span></div>
+      <div id="cp-lista" class="solic-lista"></div>
+    </section>
+
+    <!-- CAMPAÑAS -->
+    <section id="tab-campanas" class="panel">
+      <div id="camp-app"></div>
+    </section>
+  </main>
+
+  <!-- Modal asignar -->
+  <div id="modal" class="modal hidden">
+    <div class="modal-box">
+      <div class="modal-head">
+        <h3 id="modal-title">Asignar producto</h3>
+        <button id="modal-close">✕</button>
+      </div>
+      <div id="modal-body"></div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="/app.js?v=174"></script>
+</body>
+</html>

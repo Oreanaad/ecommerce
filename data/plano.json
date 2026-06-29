@@ -1,0 +1,9 @@
+{
+  "_descripcion": "Asignacion de cada zona del plano (dibujo) a un mueble. Editable desde la pestana Mapa.",
+  "asignacion": {
+    "z-ort": "orthometric",
+    "z-m1": "mostrador-1",
+    "z-m2": "mostrador-2",
+    "z-m3": "mostrador-3"
+  }
+}

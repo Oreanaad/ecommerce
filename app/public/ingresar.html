@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Ingresar · El Pasaje Dental</title>
+  <link rel="icon" type="image/png" href="/assets/favicon.png?v=2"><link rel="icon" sizes="32x32" href="/assets/favicon-32.png?v=2"><link rel="apple-touch-icon" href="/assets/apple-touch-icon.png?v=2">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Inter',sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;
+      background:linear-gradient(140deg,#4a0a26 0%,#b02060 55%,#d873bc 100%);color:#0f172a}
+    .box{background:#fff;border-radius:24px;padding:38px 34px;width:100%;max-width:400px;box-shadow:0 24px 70px rgba(0,0,0,.25);text-align:center}
+    .box img{height:54px;margin-bottom:18px}
+    h1{font-family:'Syne',sans-serif;font-size:22px;color:#DE3667;margin-bottom:6px}
+    p.sub{color:#64748b;font-size:14px;margin-bottom:22px;line-height:1.5}
+    input{width:100%;padding:14px 16px;font-size:16px;font-family:inherit;border:1px solid #f5d5e8;border-radius:12px;margin-bottom:12px;text-align:center}
+    input:focus{outline:none;border-color:#DE3667}
+    #codigo{letter-spacing:8px;font-weight:800;font-size:22px}
+    button{width:100%;padding:14px;background:#DE3667;color:#fff;border:none;border-radius:12px;font-size:16px;font-weight:700;font-family:inherit;cursor:pointer;transition:background .2s}
+    button:hover{background:#7a1040}
+    button:disabled{background:#e6c3d6;cursor:default}
+    .msg{font-size:13px;margin-top:12px;min-height:18px}
+    .msg.err{color:#e0245e}.msg.ok{color:#16a34a}
+    .dev{background:#fff7ed;color:#b45309;border:1px dashed #f1d9b5;border-radius:10px;padding:8px;font-size:13px;margin-bottom:12px}
+    .link{display:inline-block;margin-top:18px;color:#64748b;font-size:13px;text-decoration:none}
+    .link:hover{color:#DE3667}
+    .hidden{display:none}
+  </style>
+</head>
+<body>
+  <div class="box">
+    <img src="/assets/logo.png" alt="El Pasaje Dental" onerror="this.style.display='none'">
+    <div id="paso-email">
+      <h1>Ingresá a tu cuenta</h1>
+      <p class="sub">Te enviamos un código a tu email. Sin contraseñas.</p>
+      <input id="email" type="email" placeholder="tu@email.com" autocomplete="email" autofocus>
+      <input id="password" type="password" placeholder="Contraseña" autocomplete="current-password" class="hidden">
+      <button id="btn-enviar">Enviar código</button>
+      <button id="btn-clave" class="hidden" style="margin-top:10px">Entrar</button>
+      <a href="#" id="toggle-modo" class="link">¿Tenés contraseña? Entrá directo →</a>
+    </div>
+    <div id="paso-codigo" class="hidden">
+      <h1>Revisá tu email</h1>
+      <p class="sub">Te enviamos un código de 6 dígitos a <strong id="email-eco"></strong>.</p>
+      <div id="dev" class="dev hidden"></div>
+      <input id="codigo" type="text" inputmode="numeric" maxlength="6" placeholder="------">
+      <button id="btn-verificar">Entrar</button>
+    </div>
+    <div id="paso-clave" class="hidden">
+      <h1>¡Bienvenido! 🔐</h1>
+      <p class="sub">¿Querés crear una contraseña para entrar directo la próxima vez? Es opcional.</p>
+      <input id="nueva-clave" type="password" placeholder="Nueva contraseña (mín. 4)" autocomplete="new-password">
+      <button id="btn-set-clave">Guardar y entrar</button>
+      <a href="#" id="omitir" class="link">Omitir, entrar sin contraseña →</a>
+    </div>
+    <div id="msg" class="msg"></div>
+    <a href="/" class="link">← Volver a la tienda</a>
+  </div>
+  <script>
+    const $ = (s)=>document.querySelector(s);
+    let EMAIL = "", ROL = "";
+    function destino(){ return (ROL==="dueno"||ROL==="empleado") ? "/admin" : "/mi-cuenta"; }
+    function msg(t,cls){ const m=$("#msg"); m.textContent=t||""; m.className="msg "+(cls||""); }
+    $("#btn-enviar").onclick = async ()=>{
+      EMAIL = $("#email").value.trim();
+      if(!EMAIL.includes("@")){ msg("Poné un email válido","err"); return; }
+      $("#btn-enviar").disabled=true; msg("Enviando…");
+      try{
+        const r = await (await fetch("/api/auth/solicitar",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:EMAIL})})).json();
+        if(r.error){ msg(r.error,"err"); $("#btn-enviar").disabled=false; return; }
+        $("#email-eco").textContent = EMAIL;
+        $("#paso-email").classList.add("hidden"); $("#paso-codigo").classList.remove("hidden");
+        if(r.dev_codigo){ $("#dev").classList.remove("hidden"); $("#dev").innerHTML = "Modo prueba (sin email configurado). Tu código: <strong>"+r.dev_codigo+"</strong>"; }
+        msg(""); $("#codigo").focus();
+      }catch(e){ msg("No se pudo conectar","err"); $("#btn-enviar").disabled=false; }
+    };
+    async function verificar(){
+      const codigo = $("#codigo").value.trim();
+      if(codigo.length<6){ msg("Ingresá los 6 dígitos","err"); return; }
+      $("#btn-verificar").disabled=true; msg("Verificando…");
+      try{
+        const r = await (await fetch("/api/auth/verificar",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:EMAIL,codigo})})).json();
+        if(r.error){ msg(r.error,"err"); $("#btn-verificar").disabled=false; return; }
+        ROL = r.rol; msg("");
+        if(r.tiene_clave){ location.href = destino(); return; } // ya tiene contraseña → entra directo, no le pedimos crear una nueva
+        $("#paso-codigo").classList.add("hidden"); $("#paso-clave").classList.remove("hidden");
+        $("#nueva-clave").focus();
+      }catch(e){ msg("No se pudo conectar","err"); $("#btn-verificar").disabled=false; }
+    }
+    $("#btn-verificar").onclick = verificar;
+    $("#codigo").addEventListener("keydown",(e)=>{ if(e.key==="Enter") verificar(); });
+    $("#email").addEventListener("keydown",(e)=>{ if(e.key==="Enter"){ modoClave ? entrarClave() : $("#btn-enviar").click(); } });
+
+    // Modo contraseña
+    let modoClave = false;
+    $("#toggle-modo").onclick = (e)=>{ e.preventDefault(); modoClave = !modoClave;
+      $("#password").classList.toggle("hidden", !modoClave);
+      $("#btn-clave").classList.toggle("hidden", !modoClave);
+      $("#btn-enviar").classList.toggle("hidden", modoClave);
+      $("#toggle-modo").textContent = modoClave ? "← Mejor enviame un código" : "¿Tenés contraseña? Entrá directo →";
+      msg("");
+    };
+    async function entrarClave(){
+      const email = $("#email").value.trim(), password = $("#password").value;
+      if(!email.includes("@")||!password){ msg("Completá email y contraseña","err"); return; }
+      $("#btn-clave").disabled=true; msg("Entrando…");
+      try{
+        const r = await (await fetch("/api/auth/login-clave",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email,password})})).json();
+        if(r.error){ msg(r.error,"err"); $("#btn-clave").disabled=false; return; }
+        location.href = (r.rol==="dueno"||r.rol==="empleado") ? "/admin" : "/mi-cuenta";
+      }catch(e){ msg("No se pudo conectar","err"); $("#btn-clave").disabled=false; }
+    }
+    $("#btn-clave").onclick = entrarClave;
+    $("#password").addEventListener("keydown",(e)=>{ if(e.key==="Enter") entrarClave(); });
+
+    // Paso opcional: crear contraseña después de entrar con el código
+    $("#omitir").onclick = (e)=>{ e.preventDefault(); location.href = destino(); };
+    async function guardarClave(){
+      const password = $("#nueva-clave").value;
+      if(!password || password.length<4){ msg("La contraseña debe tener al menos 4 caracteres","err"); return; }
+      $("#btn-set-clave").disabled=true; msg("Guardando…");
+      try{
+        const r = await (await fetch("/api/auth/set-clave",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({password})})).json();
+        if(r.error){ msg(r.error,"err"); $("#btn-set-clave").disabled=false; return; }
+        location.href = destino();
+      }catch(e){ msg("No se pudo guardar","err"); $("#btn-set-clave").disabled=false; }
+    }
+    $("#btn-set-clave").onclick = guardarClave;
+    $("#nueva-clave").addEventListener("keydown",(e)=>{ if(e.key==="Enter") guardarClave(); });
+  </script>
+</body>
+</html>

@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Botón de arrepentimiento · El Pasaje Dental</title>
+  <meta name="description" content="Ejercé tu derecho de arrepentimiento de compra dentro de los 10 días corridos.">
+  <link rel="icon" type="image/png" href="/assets/favicon.png?v=2"><link rel="icon" sizes="32x32" href="/assets/favicon-32.png?v=2"><link rel="apple-touch-icon" href="/assets/apple-touch-icon.png?v=2">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+  <style>
+    :root { --wine-800:#7a1040; --rose-500:#DE3667; --text:#1f2733; --muted:#64748b; --bg:#fff0f7; --border:#f5d5e8; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', sans-serif; color: var(--text); background: var(--bg); line-height: 1.65; -webkit-text-size-adjust: 100%; min-height: 100vh; }
+    .card { max-width: 540px; margin: 40px auto; background: #fff; border: 1px solid var(--border); border-radius: 18px; padding: 30px 26px; }
+    .logo { display: block; height: 42px; margin: 0 auto 16px; }
+    h1 { font-family: 'Syne', sans-serif; font-size: 23px; color: var(--wine-800); text-align: center; margin-bottom: 8px; }
+    p.intro { color: var(--muted); font-size: 14px; text-align: center; margin-bottom: 22px; }
+    label { display: block; font-size: 13px; font-weight: 600; color: var(--wine-800); margin-bottom: 5px; }
+    input, textarea { width: 100%; padding: 12px 14px; border: 1px solid var(--border); border-radius: 11px; font-size: 16px; font-family: inherit; margin-bottom: 14px; }
+    input:focus, textarea:focus { outline: none; border-color: var(--rose-500); }
+    button { width: 100%; background: var(--rose-500); color: #fff; border: none; border-radius: 12px; padding: 14px; font-size: 16px; font-weight: 700; font-family: inherit; cursor: pointer; }
+    button:disabled { opacity: .6; }
+    .msg { font-size: 14px; margin-top: 14px; text-align: center; min-height: 20px; }
+    .msg.ok { color: #16a34a; } .msg.err { color: #e0245e; }
+    .legal { font-size: 12px; color: var(--muted); margin-top: 18px; line-height: 1.55; }
+    .back { display: block; text-align: center; margin-top: 18px; color: var(--rose-500); text-decoration: none; font-size: 13px; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <img src="/assets/logo.png" alt="El Pasaje Dental" class="logo">
+    <h1>Botón de arrepentimiento</h1>
+    <p class="intro">Tenés derecho a arrepentirte de tu compra dentro de los <strong>10 días corridos</strong> de recibido el producto, sin costo ni necesidad de justificar el motivo. Completá el formulario y te contactamos.</p>
+    <form id="form">
+      <label>Nombre y apellido</label>
+      <input id="nombre" required>
+      <label>Email de la compra</label>
+      <input id="email" type="email" required>
+      <label>Número de pedido</label>
+      <input id="pedido" inputmode="numeric" placeholder="Ej: 12345">
+      <label>Comentario (opcional)</label>
+      <textarea id="motivo" rows="3" placeholder="Si querés, contanos algo."></textarea>
+      <button type="submit" id="enviar">Enviar solicitud</button>
+      <div class="msg" id="msg"></div>
+    </form>
+    <p class="legal">Conforme al art. 1110 del Código Civil y Comercial de la Nación y la Resolución 424/2020 de la Secretaría de Comercio Interior. El reintegro se realizará por el mismo medio de pago una vez recibido el producto.</p>
+    <a class="back" href="/legales">← Ver información legal</a>
+  </div>
+  <script>
+    const $ = (s) => document.querySelector(s);
+    $("#form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const btn = $("#enviar"), msg = $("#msg");
+      const nombre = $("#nombre").value.trim(), email = $("#email").value.trim();
+      if (!nombre || !email) { msg.className = "msg err"; msg.textContent = "Completá nombre y email."; return; }
+      btn.disabled = true; msg.className = "msg"; msg.textContent = "Enviando…";
+      try {
+        const r = await fetch("/api/arrepentimiento", { method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ nombre, email, pedido: $("#pedido").value.trim(), motivo: $("#motivo").value.trim() }) });
+        const d = await r.json();
+        if (d.ok) { msg.className = "msg ok"; msg.textContent = "✅ Solicitud enviada. Te vamos a contactar a la brevedad."; $("#form").reset(); }
+        else { msg.className = "msg err"; msg.textContent = d.error || "No se pudo enviar. Escribinos por WhatsApp."; btn.disabled = false; }
+      } catch { msg.className = "msg err"; msg.textContent = "No se pudo enviar. Escribinos por WhatsApp."; btn.disabled = false; }
+    });
+  </script>
+</body>
+</html>

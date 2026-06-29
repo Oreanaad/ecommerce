@@ -1,0 +1,647 @@
+// Capa de datos propia: reemplaza WooCommerce. Postgres vía pg (Pool).
+// Requiere DATABASE_URL en variables de entorno (Railway lo setea automáticamente).
+import pg from "pg";
+const { Pool } = pg;
+
+let _pool = null;
+
+export function getPool() {
+  if (!_pool) {
+    const url = process.env.DATABASE_URL;
+    if (!url) throw new Error("DATABASE_URL no está configurada");
+    _pool = new Pool({
+      connectionString: url,
+      ssl: url.includes("localhost") || url.includes("127.0.0.1")
+        ? false
+        : { rejectUnauthorized: false },
+      max: 10,
+    });
+  }
+  return _pool;
+}
+
+// ─── Schema ──────────────────────────────────────────────────────────────────
+// Crear todas las tablas si no existen. Idempotente: se puede llamar al arrancar.
+
+export async function initDb() {
+  const db = getPool();
+  await db.query(`
+    CREATE SEQUENCE IF NOT EXISTS pedidos_id_seq START 1;
+  `).catch(() => {}); // ya existe en re-runs
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS categorias (
+      id        INTEGER PRIMARY KEY,
+      nombre    TEXT    NOT NULL,
+      slug      TEXT    DEFAULT '',
+      parent_id INTEGER DEFAULT 0,
+      count     INTEGER DEFAULT 0
+    );
+
+    CREATE TABLE IF NOT EXISTS productos (
+      id                INTEGER     PRIMARY KEY,
+      sku               TEXT        DEFAULT '',
+      nombre            TEXT        NOT NULL,
+      tipo              TEXT        DEFAULT 'simple',
+      precio            NUMERIC(12,2) DEFAULT 0,
+      precio_regular    NUMERIC(12,2) DEFAULT 0,
+      stock             INTEGER,
+      stock_status      TEXT        DEFAULT 'instock',
+      categorias        JSONB       DEFAULT '[]',
+      marca             TEXT        DEFAULT '',
+      descripcion       TEXT        DEFAULT '',
+      descripcion_corta TEXT        DEFAULT '',
+      imagen            TEXT        DEFAULT '',
+      imagenes          JSONB       DEFAULT '[]',
+      url               TEXT        DEFAULT '',
+      slug              TEXT        DEFAULT '',
+      peso              TEXT        DEFAULT '',
+      dimensiones       JSONB       DEFAULT '{}',
+      activo            BOOLEAN     DEFAULT true,
+      creado_en         TIMESTAMPTZ DEFAULT NOW(),
+      actualizado_en    TIMESTAMPTZ DEFAULT NOW()
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_productos_activo ON productos(activo);
+    CREATE INDEX IF NOT EXISTS idx_productos_stock  ON productos(stock_status);
+
+    CREATE TABLE IF NOT EXISTS variaciones (
+      id             INTEGER     PRIMARY KEY,
+      producto_id    INTEGER     NOT NULL REFERENCES productos(id) ON DELETE CASCADE,
+      sku            TEXT        DEFAULT '',
+      label          TEXT        DEFAULT '',
+      atributos      JSONB       DEFAULT '{}',
+      precio         NUMERIC(12,2) DEFAULT 0,
+      precio_regular NUMERIC(12,2) DEFAULT 0,
+      stock          INTEGER,
+      stock_status   TEXT        DEFAULT 'instock',
+      imagen         TEXT        DEFAULT '',
+      activo         BOOLEAN     DEFAULT true
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_variaciones_producto ON variaciones(producto_id);
+
+    CREATE TABLE IF NOT EXISTS clientes (
+      id             SERIAL      PRIMARY KEY,
+      wc_id          INTEGER,
+      email          TEXT        UNIQUE NOT NULL,
+      nombre         TEXT        DEFAULT '',
+      apellido       TEXT        DEFAULT '',
+      telefono       TEXT        DEFAULT '',
+      doc            TEXT        DEFAULT '',
+      entrega        JSONB       DEFAULT NULL,
+      billing        JSONB       DEFAULT NULL,
+      shipping       JSONB       DEFAULT NULL,
+      rol            TEXT        DEFAULT 'cliente',
+      clave          TEXT,
+      wp_pass        TEXT,
+      spam           BOOLEAN     DEFAULT false,
+      origen         TEXT        DEFAULT '',
+      creado_en      TIMESTAMPTZ DEFAULT NOW(),
+      actualizado_en TIMESTAMPTZ DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS pedidos (
+      id                INTEGER     PRIMARY KEY,
+      numero            TEXT        DEFAULT '',
+      status            TEXT        DEFAULT 'pending',
+      total             NUMERIC(12,2) DEFAULT 0,
+      subtotal          NUMERIC(12,2) DEFAULT 0,
+      shipping_total    NUMERIC(12,2) DEFAULT 0,
+      descuento_total   NUMERIC(12,2) DEFAULT 0,
+      metodo_pago       TEXT        DEFAULT '',
+      metodo_pago_titulo TEXT       DEFAULT '',
+      cliente_email     TEXT        DEFAULT '',
+      billing           JSONB       DEFAULT '{}',
+      shipping          JSONB       DEFAULT '{}',
+      shipping_lines    JSONB       DEFAULT '[]',
+      fee_lines         JSONB       DEFAULT '[]',
+      coupon_lines      JSONB       DEFAULT '[]',
+      notas             TEXT        DEFAULT '',
+      meta              JSONB       DEFAULT '{}',
+      fecha_creado      TIMESTAMPTZ DEFAULT NOW(),
+      actualizado_en    TIMESTAMPTZ DEFAULT NOW()
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_pedidos_status ON pedidos(status);
+    CREATE INDEX IF NOT EXISTS idx_pedidos_email  ON pedidos(cliente_email);
+    CREATE INDEX IF NOT EXISTS idx_pedidos_fecha  ON pedidos(fecha_creado DESC);
+
+    CREATE TABLE IF NOT EXISTS pedido_items (
+      id           SERIAL  PRIMARY KEY,
+      pedido_id    INTEGER NOT NULL REFERENCES pedidos(id) ON DELETE CASCADE,
+      product_id   INTEGER,
+      variation_id INTEGER,
+      nombre       TEXT    DEFAULT '',
+      sku          TEXT    DEFAULT '',
+      cantidad     INTEGER DEFAULT 1,
+      precio       NUMERIC(12,2) DEFAULT 0,
+      subtotal     NUMERIC(12,2) DEFAULT 0,
+      total        NUMERIC(12,2) DEFAULT 0
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_items_pedido ON pedido_items(pedido_id);
+
+    CREATE TABLE IF NOT EXISTS cupones (
+      id               SERIAL    PRIMARY KEY,
+      codigo           TEXT      UNIQUE NOT NULL,
+      tipo_descuento   TEXT      DEFAULT 'percent',
+      valor            NUMERIC(12,2) DEFAULT 0,
+      fecha_expiracion DATE,
+      uso_limite       INTEGER,
+      usos             INTEGER   DEFAULT 0,
+      min_monto        NUMERIC(12,2),
+      max_monto        NUMERIC(12,2),
+      solo_un_uso      BOOLEAN   DEFAULT false,
+      activo           BOOLEAN   DEFAULT true,
+      creado_en        TIMESTAMPTZ DEFAULT NOW()
+    );
+  `);
+}
+
+// ─── Categorías ──────────────────────────────────────────────────────────────
+
+export async function upsertCategoria({ id, nombre, slug = "", parent_id = 0, count = 0 }) {
+  const db = getPool();
+  await db.query(
+    `INSERT INTO categorias (id, nombre, slug, parent_id, count)
+     VALUES ($1,$2,$3,$4,$5)
+     ON CONFLICT (id) DO UPDATE SET nombre=$2, slug=$3, parent_id=$4, count=$5`,
+    [id, nombre, slug, parent_id, count]
+  );
+}
+
+export async function getCategorias() {
+  const { rows } = await getPool().query(`SELECT * FROM categorias ORDER BY nombre`);
+  return rows;
+}
+
+// ─── Productos ───────────────────────────────────────────────────────────────
+
+export async function upsertProducto(p) {
+  await getPool().query(
+    `INSERT INTO productos
+       (id, sku, nombre, tipo, precio, precio_regular, stock, stock_status,
+        categorias, marca, descripcion, descripcion_corta, imagen, imagenes,
+        url, slug, peso, dimensiones, activo, actualizado_en)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,NOW())
+     ON CONFLICT (id) DO UPDATE SET
+       sku=$2, nombre=$3, tipo=$4, precio=$5, precio_regular=$6,
+       stock=$7, stock_status=$8, categorias=$9, marca=$10,
+       descripcion=$11, descripcion_corta=$12, imagen=$13, imagenes=$14,
+       url=$15, slug=$16, peso=$17, dimensiones=$18, activo=$19, actualizado_en=NOW()`,
+    [
+      p.id, p.sku || "", p.nombre, p.tipo || "simple",
+      p.precio || 0, p.precio_regular || p.precio || 0,
+      p.stock ?? null, p.stock_status || "instock",
+      JSON.stringify(p.categorias || []),
+      p.marca || "", p.descripcion || "", p.descripcion_corta || "",
+      p.imagen || "", JSON.stringify(p.imagenes || []),
+      p.url || "", p.slug || "", p.peso || "",
+      JSON.stringify(p.dimensiones || {}), p.activo !== false,
+    ]
+  );
+}
+
+export async function upsertVariacion(v, productoId) {
+  await getPool().query(
+    `INSERT INTO variaciones
+       (id, producto_id, sku, label, atributos, precio, precio_regular,
+        stock, stock_status, imagen, activo)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+     ON CONFLICT (id) DO UPDATE SET
+       producto_id=$2, sku=$3, label=$4, atributos=$5, precio=$6,
+       precio_regular=$7, stock=$8, stock_status=$9, imagen=$10, activo=$11`,
+    [
+      v.id, productoId, v.sku || "", v.label || "",
+      JSON.stringify(v.atributos || {}),
+      v.precio || 0, v.precio_regular || v.precio || 0,
+      v.stock ?? null, v.stock_status || "instock",
+      v.imagen || "", v.activo !== false,
+    ]
+  );
+}
+
+// Devuelve el catálogo en el mismo shape que syncCatalogo de WooCommerce.
+// Es el reemplazo directo de leer catalogo.json.
+export async function getCatalogo() {
+  const { rows } = await getPool().query(`
+    SELECT p.*,
+      COALESCE(
+        json_agg(
+          json_build_object(
+            'id', v.id, 'sku', v.sku, 'label', v.label,
+            'atributos', v.atributos, 'precio', v.precio,
+            'precio_regular', v.precio_regular,
+            'stock', v.stock, 'stock_status', v.stock_status
+          ) ORDER BY v.id
+        ) FILTER (WHERE v.id IS NOT NULL AND v.activo = true),
+        '[]'
+      ) AS variaciones
+    FROM productos p
+    LEFT JOIN variaciones v ON v.producto_id = p.id
+    WHERE p.activo = true
+    GROUP BY p.id
+    ORDER BY p.nombre
+  `);
+  const productos = rows.map(p => ({
+    id: p.id, sku: p.sku || "", nombre: p.nombre,
+    tipo: p.tipo, precio: Number(p.precio),
+    precio_regular: Number(p.precio_regular),
+    stock: p.stock, stock_status: p.stock_status,
+    categorias: p.categorias || [], marca: p.marca || "",
+    descripcion: p.descripcion || "", descripcion_corta: p.descripcion_corta || "",
+    imagen: p.imagen || "", imagenes: p.imagenes || [],
+    url: p.url || "", slug: p.slug || "",
+    variaciones: (p.variaciones || []).map(v => ({
+      id: v.id, sku: v.sku || "", label: v.label || "",
+      atributos: v.atributos || {},
+      precio: Number(v.precio), precio_regular: Number(v.precio_regular),
+      stock: v.stock, stock_status: v.stock_status,
+    })),
+  }));
+  const categorias = [...new Set(productos.flatMap(p => p.categorias))].sort();
+  return {
+    sincronizado: new Date().toISOString(),
+    total: productos.length,
+    total_variaciones: productos.reduce((n, p) => n + p.variaciones.length, 0),
+    categorias, productos,
+  };
+}
+
+export async function getProducto(id) {
+  const db = getPool();
+  const { rows } = await db.query(`SELECT * FROM productos WHERE id = $1`, [id]);
+  if (!rows[0]) return null;
+  const { rows: vars } = await db.query(
+    `SELECT * FROM variaciones WHERE producto_id = $1 AND activo = true ORDER BY id`,
+    [id]
+  );
+  const p = rows[0];
+  return {
+    id: p.id, sku: p.sku, nombre: p.nombre, tipo: p.tipo,
+    precio: Number(p.precio), precio_regular: Number(p.precio_regular),
+    stock: p.stock, stock_status: p.stock_status,
+    categorias: p.categorias || [], marca: p.marca || "",
+    descripcion: p.descripcion || "", descripcion_corta: p.descripcion_corta || "",
+    imagen: p.imagen || "", imagenes: p.imagenes || [],
+    url: p.url || "", slug: p.slug || "",
+    peso: p.peso || "", dimensiones: p.dimensiones || {},
+    activo: p.activo,
+    variaciones: vars.map(v => ({
+      id: v.id, sku: v.sku, label: v.label, atributos: v.atributos || {},
+      precio: Number(v.precio), precio_regular: Number(v.precio_regular),
+      stock: v.stock, stock_status: v.stock_status, imagen: v.imagen || "",
+    })),
+  };
+}
+
+export async function setStock(productId, variationId, stock) {
+  const db = getPool();
+  const status = stock === null || stock > 0 ? "instock" : "outofstock";
+  if (variationId) {
+    await db.query(
+      `UPDATE variaciones SET stock=$1, stock_status=$2 WHERE id=$3`,
+      [stock, status, variationId]
+    );
+    // Recalcular stock del padre según sus variaciones
+    const { rows } = await db.query(
+      `SELECT stock, stock_status FROM variaciones WHERE producto_id=$1 AND activo=true`,
+      [productId]
+    );
+    const totalStock = rows.reduce((n, v) => n + (v.stock || 0), 0);
+    const parentStatus = rows.some(v => v.stock_status === "instock" && v.stock !== 0) ? "instock" : "outofstock";
+    await db.query(
+      `UPDATE productos SET stock=$1, stock_status=$2, actualizado_en=NOW() WHERE id=$3`,
+      [totalStock, parentStatus, productId]
+    );
+  } else {
+    await db.query(
+      `UPDATE productos SET stock=$1, stock_status=$2, actualizado_en=NOW() WHERE id=$3`,
+      [stock, status, productId]
+    );
+  }
+}
+
+export async function setPrecio(productId, variationId, precio, precioRegular) {
+  const db = getPool();
+  if (variationId) {
+    await db.query(
+      `UPDATE variaciones SET precio=$1, precio_regular=$2 WHERE id=$3`,
+      [precio, precioRegular || precio, variationId]
+    );
+  } else {
+    await db.query(
+      `UPDATE productos SET precio=$1, precio_regular=$2, actualizado_en=NOW() WHERE id=$3`,
+      [precio, precioRegular || precio, productId]
+    );
+  }
+}
+
+// ─── Clientes ────────────────────────────────────────────────────────────────
+
+export async function upsertCliente(c) {
+  const { rows } = await getPool().query(
+    `INSERT INTO clientes
+       (wc_id, email, nombre, apellido, telefono, doc,
+        entrega, billing, shipping,
+        rol, clave, wp_pass, spam, origen, actualizado_en)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,NOW())
+     ON CONFLICT (email) DO UPDATE SET
+       wc_id      = COALESCE(EXCLUDED.wc_id, clientes.wc_id),
+       nombre     = CASE WHEN EXCLUDED.nombre     != '' THEN EXCLUDED.nombre     ELSE clientes.nombre     END,
+       apellido   = CASE WHEN EXCLUDED.apellido   != '' THEN EXCLUDED.apellido   ELSE clientes.apellido   END,
+       telefono   = CASE WHEN EXCLUDED.telefono   != '' THEN EXCLUDED.telefono   ELSE clientes.telefono   END,
+       doc        = CASE WHEN EXCLUDED.doc        != '' THEN EXCLUDED.doc        ELSE clientes.doc        END,
+       entrega    = COALESCE(EXCLUDED.entrega,  clientes.entrega),
+       billing    = COALESCE(EXCLUDED.billing,  clientes.billing),
+       shipping   = COALESCE(EXCLUDED.shipping, clientes.shipping),
+       rol        = CASE WHEN EXCLUDED.rol != 'cliente' THEN EXCLUDED.rol ELSE clientes.rol END,
+       clave      = COALESCE(EXCLUDED.clave,   clientes.clave),
+       wp_pass    = COALESCE(EXCLUDED.wp_pass, clientes.wp_pass),
+       spam       = EXCLUDED.spam,
+       actualizado_en = NOW()
+     RETURNING *`,
+    [
+      c.wc_id || null,
+      (c.email || "").toLowerCase().trim(),
+      c.nombre || "", c.apellido || "",
+      c.telefono || "", c.doc || "",
+      c.entrega  ? JSON.stringify(c.entrega)  : null,
+      c.billing  ? JSON.stringify(c.billing)  : null,
+      c.shipping ? JSON.stringify(c.shipping) : null,
+      c.rol || "cliente",
+      c.clave   || null,
+      c.wp_pass || null,
+      c.spam || false,
+      c.origen || "",
+    ]
+  );
+  return rows[0];
+}
+
+export async function getCliente(email) {
+  const { rows } = await getPool().query(
+    `SELECT * FROM clientes WHERE email = $1`,
+    [(email || "").toLowerCase().trim()]
+  );
+  return rows[0] || null;
+}
+
+export async function getClientes({ page = 1, per_page = 100 } = {}) {
+  const db = getPool();
+  const offset = (page - 1) * per_page;
+  const { rows } = await db.query(
+    `SELECT * FROM clientes WHERE spam = false ORDER BY creado_en DESC LIMIT $1 OFFSET $2`,
+    [per_page, offset]
+  );
+  const { rows: [{ count }] } = await db.query(`SELECT COUNT(*) FROM clientes WHERE spam = false`);
+  return { clientes: rows, total: Number(count) };
+}
+
+export async function buscarClientes(q) {
+  const term = `%${q}%`;
+  const { rows } = await getPool().query(
+    `SELECT * FROM clientes
+     WHERE spam = false
+       AND (email ILIKE $1 OR nombre ILIKE $1 OR apellido ILIKE $1 OR telefono ILIKE $1)
+     LIMIT 20`,
+    [term]
+  );
+  return rows;
+}
+
+export async function actualizarCliente(email, campos) {
+  email = (email || "").toLowerCase().trim();
+  const allowed = ["nombre", "apellido", "telefono", "doc", "entrega", "billing", "shipping", "rol", "clave", "wp_pass"];
+  const sets = [], vals = [];
+  for (const [k, v] of Object.entries(campos || {})) {
+    if (!allowed.includes(k)) continue;
+    vals.push(typeof v === "object" && v !== null ? JSON.stringify(v) : v);
+    sets.push(`${k} = $${vals.length}`);
+  }
+  if (!sets.length) return;
+  vals.push(email);
+  await getPool().query(
+    `UPDATE clientes SET ${sets.join(", ")}, actualizado_en=NOW() WHERE email=$${vals.length}`,
+    vals
+  );
+}
+
+// ─── Pedidos ─────────────────────────────────────────────────────────────────
+
+export async function crearPedido(data) {
+  const db = getPool();
+  const client = await db.connect();
+  try {
+    await client.query("BEGIN");
+    if (!data.id) {
+      const { rows: [{ nextval }] } = await client.query(`SELECT nextval('pedidos_id_seq')`);
+      data.id = Number(nextval);
+    }
+    const { rows: [p] } = await client.query(
+      `INSERT INTO pedidos
+         (id, numero, status, total, subtotal, shipping_total, descuento_total,
+          metodo_pago, metodo_pago_titulo, cliente_email,
+          billing, shipping, shipping_lines, fee_lines, coupon_lines,
+          notas, meta, fecha_creado)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
+       RETURNING *`,
+      [
+        data.id,
+        data.numero || String(data.id),
+        data.status || "pending",
+        data.total || 0,
+        data.subtotal || 0,
+        data.shipping_total || 0,
+        data.descuento_total || 0,
+        data.metodo_pago || "",
+        data.metodo_pago_titulo || "",
+        (data.cliente_email || "").toLowerCase(),
+        JSON.stringify(data.billing || {}),
+        JSON.stringify(data.shipping || {}),
+        JSON.stringify(data.shipping_lines || []),
+        JSON.stringify(data.fee_lines || []),
+        JSON.stringify(data.coupon_lines || []),
+        data.notas || "",
+        JSON.stringify(data.meta || {}),
+        data.fecha_creado ? new Date(data.fecha_creado) : new Date(),
+      ]
+    );
+    for (const it of data.items || []) {
+      await client.query(
+        `INSERT INTO pedido_items
+           (pedido_id, product_id, variation_id, nombre, sku, cantidad, precio, subtotal, total)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+        [p.id, it.product_id || null, it.variation_id || null, it.nombre || "", it.sku || "", it.cantidad || 1, it.precio || 0, it.subtotal || 0, it.total || 0]
+      );
+    }
+    await client.query("COMMIT");
+    return p;
+  } catch (e) {
+    await client.query("ROLLBACK");
+    throw e;
+  } finally {
+    client.release();
+  }
+}
+
+export async function getPedido(id) {
+  const db = getPool();
+  const { rows } = await db.query(`SELECT * FROM pedidos WHERE id = $1`, [id]);
+  if (!rows[0]) return null;
+  const { rows: items } = await db.query(
+    `SELECT * FROM pedido_items WHERE pedido_id = $1 ORDER BY id`,
+    [id]
+  );
+  return { ...rows[0], items };
+}
+
+export async function getPedidos({ page = 1, per_page = 100, limit, status, email, after, before, desde, hasta, q } = {}) {
+  const wheres = [], vals = [];
+  if (status) {
+    const list = Array.isArray(status) ? status : status.split(",").map(s => s.trim()).filter(Boolean);
+    vals.push(list);
+    wheres.push(`status = ANY($${vals.length})`);
+  }
+  if (email) { vals.push(email.toLowerCase()); wheres.push(`cliente_email = $${vals.length}`); }
+  if (q)     { vals.push(`%${q}%`); wheres.push(`(cliente_email ILIKE $${vals.length} OR billing->>'first_name' ILIKE $${vals.length} OR billing->>'last_name' ILIKE $${vals.length} OR CAST(id AS TEXT) LIKE $${vals.length})`); }
+  if (after)  { vals.push(new Date(after));  wheres.push(`fecha_creado >= $${vals.length}`); }
+  if (before) { vals.push(new Date(before)); wheres.push(`fecha_creado <= $${vals.length}`); }
+  if (desde)  { vals.push(desde); wheres.push(`fecha_creado::date >= $${vals.length}::date`); }
+  if (hasta)  { vals.push(hasta); wheres.push(`fecha_creado::date <= $${vals.length}::date`); }
+  const where = wheres.length ? `WHERE ${wheres.join(" AND ")}` : "";
+  const lim = limit || per_page;
+  const offset = (page - 1) * lim;
+  vals.push(lim, offset);
+  const { rows } = await getPool().query(
+    `SELECT p.*, COALESCE(json_agg(pi ORDER BY pi.id) FILTER (WHERE pi.id IS NOT NULL), '[]') AS items
+     FROM pedidos p LEFT JOIN pedido_items pi ON pi.pedido_id = p.id
+     ${where} GROUP BY p.id ORDER BY p.fecha_creado DESC LIMIT $${vals.length - 1} OFFSET $${vals.length}`,
+    vals
+  );
+  return rows;
+}
+
+export async function updatePedidoStatus(id, status) {
+  const { rows } = await getPool().query(
+    `UPDATE pedidos SET status=$1, actualizado_en=NOW() WHERE id=$2 RETURNING *`,
+    [status, id]
+  );
+  return rows[0];
+}
+
+export async function updatePedido(id, fields) {
+  const allowed = [
+    "status", "total", "subtotal", "shipping_total", "descuento_total",
+    "metodo_pago", "metodo_pago_titulo", "billing", "shipping",
+    "shipping_lines", "fee_lines", "coupon_lines", "notas", "meta",
+  ];
+  const sets = [], vals = [];
+  for (const [k, v] of Object.entries(fields)) {
+    if (!allowed.includes(k)) continue;
+    vals.push(typeof v === "object" && v !== null ? JSON.stringify(v) : v);
+    sets.push(`${k} = $${vals.length}`);
+  }
+  if (!sets.length) return null;
+  vals.push(id);
+  const { rows } = await getPool().query(
+    `UPDATE pedidos SET ${sets.join(", ")}, actualizado_en=NOW() WHERE id=$${vals.length} RETURNING *`,
+    vals
+  );
+  return rows[0];
+}
+
+// ─── Cupones ─────────────────────────────────────────────────────────────────
+
+export async function getCupones() {
+  const { rows } = await getPool().query(
+    `SELECT * FROM cupones WHERE activo = true ORDER BY creado_en DESC`
+  );
+  return rows;
+}
+
+export async function getCupon(codigo) {
+  const { rows } = await getPool().query(
+    `SELECT * FROM cupones WHERE codigo = $1 AND activo = true`,
+    [(codigo || "").toLowerCase().trim()]
+  );
+  return rows[0] || null;
+}
+
+export async function crearCupon(c) {
+  const { rows } = await getPool().query(
+    `INSERT INTO cupones
+       (codigo, tipo_descuento, valor, fecha_expiracion, uso_limite, usos,
+        min_monto, max_monto, solo_un_uso)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+     ON CONFLICT (codigo) DO UPDATE SET
+       tipo_descuento=$2, valor=$3, fecha_expiracion=$4,
+       uso_limite=$5, min_monto=$7, max_monto=$8, solo_un_uso=$9
+     RETURNING *`,
+    [
+      (c.codigo || "").toLowerCase().trim(),
+      c.tipo_descuento || c.discount_type || "percent",
+      Number(c.valor || c.amount || 0),
+      c.fecha_expiracion || c.date_expires || null,
+      c.uso_limite || c.usage_limit || null,
+      c.usos || c.usage_count || 0,
+      Number(c.min_monto || c.minimum_amount || 0) || null,
+      Number(c.max_monto || c.maximum_amount || 0) || null,
+      c.solo_un_uso || c.individual_use || false,
+    ]
+  );
+  return rows[0];
+}
+
+export async function borrarCupon(id) {
+  await getPool().query(`UPDATE cupones SET activo=false WHERE id=$1`, [id]);
+}
+
+export async function incrementarUsoCupon(codigo) {
+  await getPool().query(
+    `UPDATE cupones SET usos = usos + 1 WHERE codigo = $1`,
+    [(codigo || "").toLowerCase().trim()]
+  );
+}
+
+// ─── Stock delta (atómico en Postgres, sin locks JS) ─────────────────────────
+
+export async function adjustStock(productId, variationId, delta) {
+  delta = Math.round(Number(delta) || 0);
+  if (!delta) return;
+  const db = getPool();
+  if (variationId) {
+    await db.query(
+      `UPDATE variaciones SET
+         stock = GREATEST(0, COALESCE(stock, 0) + $1),
+         stock_status = CASE WHEN GREATEST(0, COALESCE(stock, 0) + $1) > 0 THEN 'instock' ELSE 'outofstock' END
+       WHERE id = $2`,
+      [delta, variationId]
+    );
+    const { rows } = await db.query(
+      `SELECT stock, stock_status FROM variaciones WHERE producto_id = $1 AND activo = true`,
+      [productId]
+    );
+    const totalStock = rows.reduce((n, v) => n + (v.stock || 0), 0);
+    const parentStatus = rows.some(v => v.stock_status === "instock" && v.stock !== 0) ? "instock" : "outofstock";
+    await db.query(
+      `UPDATE productos SET stock = $1, stock_status = $2, actualizado_en = NOW() WHERE id = $3`,
+      [totalStock, parentStatus, productId]
+    );
+  } else {
+    await db.query(
+      `UPDATE productos SET
+         stock = GREATEST(0, COALESCE(stock, 0) + $1),
+         stock_status = CASE WHEN GREATEST(0, COALESCE(stock, 0) + $1) > 0 THEN 'instock' ELSE 'outofstock' END,
+         actualizado_en = NOW()
+       WHERE id = $2`,
+      [delta, productId]
+    );
+  }
+}
+
+// Genera el próximo ID de pedido desde la secuencia de Postgres
+export async function nextPedidoId() {
+  const { rows: [{ nextval }] } = await getPool().query(`SELECT nextval('pedidos_id_seq')`);
+  return Number(nextval);
+}

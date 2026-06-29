@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Mi cuenta · El Pasaje Dental</title>
+  <link rel="icon" type="image/png" href="/assets/favicon.png?v=2"><link rel="icon" sizes="32x32" href="/assets/favicon-32.png?v=2"><link rel="apple-touch-icon" href="/assets/apple-touch-icon.png?v=2">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Inter',sans-serif;background:#fff0f7;color:#0f172a;min-height:100vh}
+    .top{background:#fff;border-bottom:1px solid #f5d5e8;padding:14px 24px;display:flex;align-items:center;justify-content:space-between}
+    .top img{height:40px}
+    .top a{color:#64748b;text-decoration:none;font-size:14px;font-weight:600}.top a:hover{color:#DE3667}
+    .wrap{max-width:760px;margin:0 auto;padding:32px 20px}
+    h1{font-family:'Syne',sans-serif;font-size:26px;margin-bottom:4px}
+    .saludo{color:#64748b;margin-bottom:24px}
+    .card{background:#fff;border:1px solid #f5d5e8;border-radius:18px;padding:22px;margin-bottom:18px;box-shadow:0 1px 3px rgba(74,10,38,.05)}
+    .card h2{font-size:16px;margin-bottom:14px;font-family:'Syne',sans-serif}
+    .fila{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #fce7f1;font-size:14px}
+    .fila:last-child{border:none}.fila span{color:#64748b}
+    .badge{display:inline-block;background:#fde7ee;color:#cc2b5e;font-size:12px;font-weight:700;padding:2px 10px;border-radius:100px}
+    input{width:100%;padding:12px 14px;border:1px solid #f5d5e8;border-radius:10px;font-size:16px;font-family:inherit;margin-bottom:10px}
+    input:focus{outline:none;border-color:#DE3667}
+    button{background:#DE3667;color:#fff;border:none;border-radius:10px;padding:12px 20px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer}
+    button:hover{background:#7a1040}
+    .salir{background:#fff;color:#e0245e;border:1px solid #f3c6d6}
+    .salir:hover{background:#fdecf2}
+    .ped{border:1px solid #f5d5e8;border-radius:12px;padding:14px;margin-bottom:10px}
+    .ped-top{display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px}
+    .ped-total{font-family:'Syne',sans-serif;font-weight:800;color:#7a1040}
+    .est{font-size:11px;padding:2px 9px;border-radius:100px;background:#eef2ff;color:#4338ca}
+    .vacio{color:#64748b;font-size:14px;text-align:center;padding:18px}
+    .msg{font-size:13px;margin-top:8px}.msg.ok{color:#16a34a}.msg.err{color:#e0245e}
+    .insignias{display:flex;flex-wrap:wrap;gap:10px}
+    .ins{width:96px;text-align:center;border:1px solid #f0dbe7;border-radius:14px;padding:12px 6px;background:#fff}
+    .ins.on{background:#fff0f7;border-color:#DE3667;box-shadow:0 4px 14px rgba(222,54,103,.12)}
+    .ins.off{opacity:.4;filter:grayscale(1)}
+    .ins-ico{font-size:30px}.ins-n{font-size:11px;color:#7a1040;font-weight:600;margin-top:4px;line-height:1.2}
+    .premio{margin-top:12px;background:linear-gradient(90deg,#7a1040,#DE3667);color:#fff;border-radius:12px;padding:12px 14px;font-size:14px}
+  </style>
+</head>
+<body>
+  <div class="top">
+    <a href="/"><img src="/assets/logo.png" alt="El Pasaje Dental" onerror="this.outerHTML='El Pasaje Dental'"></a>
+    <div><a href="/tienda" style="margin-right:18px">Tienda</a><a href="#" id="salir">Cerrar sesión</a></div>
+  </div>
+  <div class="wrap">
+    <h1>Mi cuenta</h1>
+    <p class="saludo" id="saludo">Cargando…</p>
+
+    <div class="card">
+      <h2>Mis datos</h2>
+      <div class="fila"><span>Email</span><strong id="d-email"></strong></div>
+      <div class="fila"><span>Nombre</span><strong id="d-nombre">—</strong></div>
+      <div class="fila"><span>Rol</span><span class="badge" id="d-rol"></span></div>
+    </div>
+
+    <div class="card">
+      <h2>Contraseña para entrar directo</h2>
+      <p style="color:#64748b;font-size:13px;margin-bottom:12px">Opcional: definí una contraseña y la próxima entrás sin esperar el código.</p>
+      <input id="nueva-clave" type="password" placeholder="Nueva contraseña (mín. 4 caracteres)">
+      <button id="btn-clave">Guardar contraseña</button>
+      <div class="msg" id="msg-clave"></div>
+    </div>
+
+    <div class="card" id="card-metas">
+      <h2>🏅 Mis logros</h2>
+      <div id="metas"><div class="vacio">Cargando…</div></div>
+    </div>
+
+    <div class="card">
+      <h2>Mis pedidos</h2>
+      <div id="pedidos"><div class="vacio">Cargando…</div></div>
+    </div>
+  </div>
+  <script>
+    const $=(s)=>document.querySelector(s);
+    const precio=(n)=>"$"+Number(n||0).toLocaleString("es-AR");
+    const rolNom={dueno:"Dueño",empleado:"Empleado",cliente:"Cliente"};
+    (async()=>{
+      const yo = await (await fetch("/api/auth/yo")).json();
+      if(!yo.autenticado){ location.href="/ingresar"; return; }
+      $("#saludo").textContent = "Hola"+(yo.nombre?(", "+yo.nombre.split(" ")[0]):"")+" 👋";
+      $("#d-email").textContent = yo.email;
+      $("#d-nombre").textContent = yo.nombre || "—";
+      $("#d-rol").textContent = rolNom[yo.rol]||yo.rol;
+      const pd = await (await fetch("/api/cuenta/pedidos")).json();
+      const cont = $("#pedidos");
+      if(!pd.pedidos || !pd.pedidos.length){ cont.innerHTML='<div class="vacio">Todavía no tenés pedidos.</div>'; }
+      else cont.innerHTML = pd.pedidos.map(p=>`<div class="ped"><div class="ped-top"><span>#${p.number||p.id} · ${(p.date_created||"").slice(0,10)}</span><span class="est">${p.status}</span></div><div class="ped-total">${precio(p.total)}</div></div>`).join("");
+      // Metas / insignias
+      try {
+        const m = await (await fetch("/api/cuenta/metas")).json();
+        const cm = $("#metas");
+        const badges = (m.insignias||[]).map(b=>`<div class="ins ${b.lograda?'on':'off'}" title="${b.n} compra(s)"><div class="ins-ico">${b.icono}</div><div class="ins-n">${b.nombre}</div></div>`).join("");
+        let prog = "";
+        if (m.proxima) { const falta = m.proxima.n - m.compras; prog = `<p style="color:#64748b;font-size:13px;margin-top:10px">Te falta${falta>1?'n':''} <b>${falta}</b> compra${falta>1?'s':''} para la insignia <b>${m.proxima.icono} ${m.proxima.nombre}</b>.</p>`; }
+        else prog = `<p style="color:#64748b;font-size:13px;margin-top:10px">¡Tenés todas las insignias! Sos una leyenda 👑</p>`;
+        const premio = m.premios>0 ? `<div class="premio">🎁 ¡Ganaste <b>${m.premios}</b> premio${m.premios>1?'s':''}! Cada 5 compras tenés un beneficio. Pedilo en tu próxima compra o por WhatsApp.</div>` : "";
+        cm.innerHTML = `<p style="color:#334155;font-size:14px;margin-bottom:12px"><b>${m.compras}</b> compra${m.compras===1?'':'s'} · total ${precio(m.total)}</p><div class="insignias">${badges}</div>${prog}${premio}`;
+      } catch { $("#metas").innerHTML = '<div class="vacio">No se pudieron cargar.</div>'; }
+    })();
+    $("#btn-clave").onclick = async ()=>{
+      const password=$("#nueva-clave").value;
+      const m=$("#msg-clave");
+      const r = await (await fetch("/api/auth/set-clave",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({password})})).json();
+      if(r.error){ m.className="msg err"; m.textContent=r.error; } else { m.className="msg ok"; m.textContent="¡Contraseña guardada! Ya podés entrar directo."; $("#nueva-clave").value=""; }
+    };
+    $("#salir").onclick = async (e)=>{ e.preventDefault(); await fetch("/api/auth/salir",{method:"POST"}); location.href="/"; };
+  </script>
+</body>
+</html>

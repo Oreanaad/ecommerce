@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>El Pasaje Dental — Pago</title>
+  <link rel="icon" type="image/png" href="/assets/favicon.png?v=2"><link rel="icon" sizes="32x32" href="/assets/favicon-32.png?v=2"><link rel="apple-touch-icon" href="/assets/apple-touch-icon.png?v=2">
+  <link rel="stylesheet" href="/tienda.css?v=4" />
+  <style>
+    .pago-wrap { min-height: 70vh; display: flex; align-items: center; justify-content: center; padding: 24px; }
+    .pago-card { background: #fff; border: 1px solid #eedfe7; border-radius: 18px; box-shadow: 0 8px 30px rgba(122,16,64,.08); padding: 40px 32px; max-width: 460px; text-align: center; }
+    .pago-ico { font-size: 56px; line-height: 1; margin-bottom: 12px; }
+    .pago-card h1 { font-family: 'Syne', sans-serif; color: var(--wine-800); font-size: 24px; margin: 0 0 10px; }
+    .pago-card p { color: var(--text-mid); font-size: 15px; line-height: 1.6; margin: 6px 0; }
+    .pago-ref { font-size: 13px; color: var(--text-light); margin-top: 8px; }
+    .pago-btns { margin-top: 22px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+    .pago-btn { display: inline-block; text-decoration: none; padding: 12px 20px; border-radius: 12px; font-weight: 700; font-size: 14px; }
+    .pago-btn.p { background: var(--rose-500); color: #fff; }
+    .pago-btn.s { background: #fff; color: var(--wine-800); border: 1.5px solid #e4cdd9; }
+    .pago-datos { background: #faf3f7; border: 1px solid #f0dbe7; border-radius: 12px; padding: 14px 16px; text-align: left; font-size: 14px; margin-top: 16px; }
+  </style>
+</head>
+<body>
+  <div class="pago-wrap"><div class="pago-card" id="card"></div></div>
+  <script>
+    const path = location.pathname.replace(/\/$/, "").split("/").pop();
+    const params = new URLSearchParams(location.search);
+    const order = params.get("order");
+    const metodo = params.get("m");
+    const ref = order ? `<p class="pago-ref">Pedido #${order}</p>` : "";
+    const volver = `<div class="pago-btns"><a class="pago-btn p" href="/tienda">Seguir comprando</a><a class="pago-btn s" href="/mi-cuenta">Ver mis pedidos</a></div>`;
+    let html = "";
+    if (path === "exito") {
+      localStorage.removeItem("pasaje_cart");
+      html = `<div class="pago-ico">✅</div><h1>¡Pago aprobado!</h1><p>Recibimos tu pago. Te llega la confirmación por email y preparamos tu pedido.</p>${ref}${volver}`;
+    } else if (path === "pendiente") {
+      localStorage.removeItem("pasaje_cart");
+      html = `<div class="pago-ico">⏳</div><h1>Pago en proceso</h1><p>Tu pago está siendo procesado. Apenas se acredite, te confirmamos por email y preparamos el pedido.</p>${ref}${volver}`;
+    } else if (path === "recibido") {
+      localStorage.removeItem("pasaje_cart");
+      const datos = metodo === "transferencia"
+        ? `<div class="pago-datos"><strong>Datos para transferir:</strong><br>El Pasaje Dental<br>CBU / alias: <em>(te los pasamos al confirmar)</em><br>Enviá el comprobante por WhatsApp y preparamos tu pedido.</div>`
+        : `<div class="pago-datos"><strong>Retiro en el local:</strong><br>Coordinamos el retiro y pagás en efectivo al retirar.</div>`;
+      html = `<div class="pago-ico">🧾</div><h1>¡Pedido recibido!</h1><p>Tu pedido quedó registrado.</p>${datos}${ref}${volver}`;
+    } else { // error
+      html = `<div class="pago-ico">⚠️</div><h1>El pago no se completó</h1><p>No se pudo procesar el pago. No te preocupes, no se hizo ningún cobro. Podés intentar de nuevo.</p>${ref}<div class="pago-btns"><a class="pago-btn p" href="/tienda">Volver a la tienda</a></div>`;
+    }
+    document.getElementById("card").innerHTML = html;
+  </script>
+</body>
+</html>

@@ -1,0 +1,931 @@
+{
+  "_descripcion": "Estructura fisica del local. Cada slot tiene un id estable que usa data/ubicaciones.json para mapear productos.",
+  "plano": {
+    "_nota": "Zonas transcritas del dibujo a mano. La asignacion zona->mueble vive en data/plano.json (editable desde el Mapa). viewBox 0 0 100 72.",
+    "viewBox": "0 0 100 72",
+    "zonas": [
+      {
+        "id": "z-exhibidor",
+        "etiqueta": "Exhibidor",
+        "x": 3,
+        "y": 3,
+        "w": 7,
+        "h": 18
+      },
+      {
+        "id": "z-ort",
+        "etiqueta": "ORT",
+        "x": 33,
+        "y": 3,
+        "w": 18,
+        "h": 6
+      },
+      {
+        "id": "z-m2",
+        "etiqueta": "M2",
+        "x": 63,
+        "y": 4,
+        "w": 16,
+        "h": 15
+      },
+      {
+        "id": "z-m1",
+        "etiqueta": "M1",
+        "x": 63,
+        "y": 19,
+        "w": 16,
+        "h": 12
+      },
+      {
+        "id": "z-vts2",
+        "etiqueta": "vts2",
+        "x": 85,
+        "y": 9,
+        "w": 9,
+        "h": 14
+      },
+      {
+        "id": "z-m3",
+        "etiqueta": "M3",
+        "x": 23,
+        "y": 31,
+        "w": 24,
+        "h": 7
+      },
+      {
+        "id": "z-5",
+        "etiqueta": "5",
+        "x": 87,
+        "y": 31,
+        "w": 8,
+        "h": 5
+      },
+      {
+        "id": "z-r3",
+        "etiqueta": "R3",
+        "x": 22,
+        "y": 43,
+        "w": 6,
+        "h": 12
+      },
+      {
+        "id": "z-x1",
+        "etiqueta": "x1",
+        "x": 85,
+        "y": 38,
+        "w": 13,
+        "h": 25
+      },
+      {
+        "id": "z-x2",
+        "etiqueta": "x2",
+        "x": 57,
+        "y": 63,
+        "w": 31,
+        "h": 6
+      }
+    ]
+  },
+  "muebles": [
+    {
+      "id": "vitrina-entrada",
+      "nombre": "Vitrina entrada",
+      "nota": "Productos exhibidos, el contenido cambia permanentemente",
+      "secciones": [
+        {
+          "nombre": "Estantes",
+          "vista": "lista",
+          "slots": [
+            {
+              "id": "vitrina-entrada.estante-1",
+              "label": "Estante 1",
+              "nota": "Combos"
+            },
+            {
+              "id": "vitrina-entrada.estante-2",
+              "label": "Estante 2",
+              "nota": "Combos"
+            },
+            {
+              "id": "vitrina-entrada.estante-3",
+              "label": "Estante 3",
+              "nota": "Productos variables"
+            },
+            {
+              "id": "vitrina-entrada.estante-4",
+              "label": "Estante 4",
+              "nota": "Productos variables"
+            },
+            {
+              "id": "vitrina-entrada.estante-5",
+              "label": "Estante 5",
+              "nota": "Productos variables"
+            }
+          ]
+        }
+      ],
+      "rol": "exhibicion"
+    },
+    {
+      "id": "orthometric",
+      "nombre": "Exhibidor Orthometric",
+      "nota": "Productos marca Orthometric y otros de ortodoncia",
+      "secciones": [
+        {
+          "nombre": "Matriz de colgantes (3 columnas x 4 filas)",
+          "vista": "grid",
+          "filas": 4,
+          "columnas": 3,
+          "slots": [
+            {
+              "id": "orthometric.colgante-r1c1",
+              "label": "F1-C1",
+              "r": 1,
+              "c": 1
+            },
+            {
+              "id": "orthometric.colgante-r1c2",
+              "label": "F1-C2",
+              "r": 1,
+              "c": 2
+            },
+            {
+              "id": "orthometric.colgante-r1c3",
+              "label": "F1-C3",
+              "r": 1,
+              "c": 3
+            },
+            {
+              "id": "orthometric.colgante-r2c1",
+              "label": "F2-C1",
+              "r": 2,
+              "c": 1
+            },
+            {
+              "id": "orthometric.colgante-r2c2",
+              "label": "F2-C2",
+              "r": 2,
+              "c": 2
+            },
+            {
+              "id": "orthometric.colgante-r2c3",
+              "label": "F2-C3",
+              "r": 2,
+              "c": 3
+            },
+            {
+              "id": "orthometric.colgante-r3c1",
+              "label": "F3-C1",
+              "r": 3,
+              "c": 1
+            },
+            {
+              "id": "orthometric.colgante-r3c2",
+              "label": "F3-C2",
+              "r": 3,
+              "c": 2
+            },
+            {
+              "id": "orthometric.colgante-r3c3",
+              "label": "F3-C3",
+              "r": 3,
+              "c": 3
+            },
+            {
+              "id": "orthometric.colgante-r4c1",
+              "label": "F4-C1",
+              "r": 4,
+              "c": 1
+            },
+            {
+              "id": "orthometric.colgante-r4c2",
+              "label": "F4-C2",
+              "r": 4,
+              "c": 2
+            },
+            {
+              "id": "orthometric.colgante-r4c3",
+              "label": "F4-C3",
+              "r": 4,
+              "c": 3
+            }
+          ]
+        },
+        {
+          "nombre": "Estantes inferiores",
+          "vista": "lista",
+          "slots": [
+            {
+              "id": "orthometric.estante-1",
+              "label": "Estante 1"
+            },
+            {
+              "id": "orthometric.estante-2",
+              "label": "Estante 2",
+              "nota": "Contiene la cajonera"
+            }
+          ]
+        },
+        {
+          "nombre": "Cajonera (en estante inferior)",
+          "vista": "cajonera",
+          "slots": [
+            {
+              "id": "orthometric.cajon-grande-1",
+              "label": "Grande 1"
+            },
+            {
+              "id": "orthometric.cajon-grande-2",
+              "label": "Grande 2"
+            },
+            {
+              "id": "orthometric.cajon-grande-3",
+              "label": "Grande 3"
+            },
+            {
+              "id": "orthometric.cajon-grande-4",
+              "label": "Grande 4"
+            },
+            {
+              "id": "orthometric.cajon-chico-n1-1",
+              "label": "Chico N1-A"
+            },
+            {
+              "id": "orthometric.cajon-chico-n1-2",
+              "label": "Chico N1-B"
+            },
+            {
+              "id": "orthometric.cajon-chico-n2-1",
+              "label": "Chico N2-A"
+            },
+            {
+              "id": "orthometric.cajon-chico-n2-2",
+              "label": "Chico N2-B"
+            },
+            {
+              "id": "orthometric.cajon-chico-n3-1",
+              "label": "Chico N3-A"
+            },
+            {
+              "id": "orthometric.cajon-chico-n3-2",
+              "label": "Chico N3-B"
+            },
+            {
+              "id": "orthometric.cajon-chico-n4-1",
+              "label": "Chico N4-A"
+            },
+            {
+              "id": "orthometric.cajon-chico-n4-2",
+              "label": "Chico N4-B"
+            }
+          ]
+        }
+      ],
+      "rol": "exhibicion"
+    },
+    {
+      "id": "mostrador-1",
+      "nombre": "Mostrador 1",
+      "nota": "Instrumental",
+      "secciones": [
+        {
+          "nombre": "Mostrador",
+          "vista": "lista",
+          "slots": [
+            {
+              "id": "mostrador-1.superior",
+              "label": "Vidrio superior",
+              "nota": "Instrumental, 1 de cada"
+            },
+            {
+              "id": "mostrador-1.estante-1",
+              "label": "Estante 1",
+              "nota": "Instrumental suelto"
+            },
+            {
+              "id": "mostrador-1.cajon-1",
+              "label": "Cajón 1",
+              "nota": "Mecheros"
+            },
+            {
+              "id": "mostrador-1.cajon-2",
+              "label": "Cajón 2",
+              "nota": "Espátulas de composite"
+            },
+            {
+              "id": "mostrador-1.estante-2",
+              "label": "Estante 2",
+              "nota": "Stock de agujas"
+            }
+          ]
+        }
+      ],
+      "rol": "exhibicion"
+    },
+    {
+      "id": "mostrador-2",
+      "nombre": "Mostrador 2",
+      "nota": "Operatoria",
+      "secciones": [
+        {
+          "nombre": "Mostrador",
+          "vista": "lista",
+          "slots": [
+            {
+              "id": "mostrador-2.superior",
+              "label": "Vidrio superior",
+              "nota": "Operatoria, cosas llamativas"
+            },
+            {
+              "id": "mostrador-2.estante-1",
+              "label": "Estante 1",
+              "nota": "3 tappers chicos con divisiones + 1 taper doble"
+            },
+            {
+              "id": "mostrador-2.cajon-1",
+              "label": "Cajón 1",
+              "nota": "Fresas y reposición del mostrador"
+            },
+            {
+              "id": "mostrador-2.cajon-2",
+              "label": "Cajón 2",
+              "nota": "Fresas y reposición del mostrador"
+            },
+            {
+              "id": "mostrador-2.estante-2",
+              "label": "Estante 2",
+              "nota": "Cubetas y otros"
+            },
+            {
+              "id": "mostrador-2.tupper-1",
+              "label": "Tupper 1"
+            },
+            {
+              "id": "mostrador-2.tupper-2",
+              "label": "Tupper 2"
+            },
+            {
+              "id": "mostrador-2.tupper-3",
+              "label": "Tupper 3"
+            },
+            {
+              "id": "mostrador-2.tupper-4",
+              "label": "Tupper 4"
+            },
+            {
+              "id": "mostrador-2.piedras-1",
+              "label": "Piedras 1",
+              "nota": "Bandeja sobre Estante 1"
+            },
+            {
+              "id": "mostrador-2.piedras-2",
+              "label": "Piedras 2",
+              "nota": "Bandeja sobre Estante 1"
+            }
+          ]
+        }
+      ],
+      "rol": "exhibicion"
+    },
+    {
+      "id": "mostrador-3",
+      "nombre": "Mostrador 3",
+      "nota": "Endodoncia",
+      "secciones": [
+        {
+          "nombre": "Mostrador",
+          "vista": "lista",
+          "slots": [
+            {
+              "id": "mostrador-3.superior",
+              "label": "Vidrio superior",
+              "nota": "Endodoncia exhibida"
+            },
+            {
+              "id": "mostrador-3.estante-1",
+              "label": "Estante 1",
+              "nota": "Endodoncia relacionada"
+            },
+            {
+              "id": "mostrador-3.cajon-1",
+              "label": "Cajón 1",
+              "nota": "Ortodoncia que no entra en el exhibidor principal"
+            },
+            {
+              "id": "mostrador-3.cajon-2",
+              "label": "Cajón 2",
+              "nota": "Ortodoncia que no entra en el exhibidor principal"
+            },
+            {
+              "id": "mostrador-3.estante-2",
+              "label": "Estante 2",
+              "nota": "Yesos, alginatos y sobrantes"
+            }
+          ]
+        }
+      ],
+      "rol": "exhibicion"
+    },
+    {
+      "id": "pared-logo",
+      "nombre": "Pared del logo",
+      "nota": "Productos exhibidos",
+      "secciones": [
+        {
+          "nombre": "Estantes",
+          "vista": "lista",
+          "slots": [
+            {
+              "id": "pared-logo.estante-1",
+              "label": "Estante 1"
+            },
+            {
+              "id": "pared-logo.estante-2",
+              "label": "Estante 2"
+            },
+            {
+              "id": "pared-logo.estante-3",
+              "label": "Estante 3"
+            },
+            {
+              "id": "pared-logo.estante-4",
+              "label": "Estante 4"
+            }
+          ]
+        }
+      ],
+      "rol": "exhibicion"
+    },
+    {
+      "id": "mueble-grande",
+      "nombre": "Mueble grande",
+      "nota": "Arriba estantes (4 niveles) + encima; abajo cajones y, a la derecha, compresas",
+      "secciones": [
+        {
+          "nombre": "Encima del mueble",
+          "vista": "lista",
+          "slots": [
+            {
+              "id": "mueble-grande.encima",
+              "label": "Encima del mueble",
+              "nota": "Almacenamiento superior"
+            }
+          ]
+        },
+        {
+          "nombre": "Estante · Nivel 1",
+          "vista": "grid",
+          "columnas": 4,
+          "slots": [
+            {
+              "id": "mueble-grande.nivel-1-div-1",
+              "label": "Div 1"
+            },
+            {
+              "id": "mueble-grande.nivel-1-div-2",
+              "label": "Div 2"
+            },
+            {
+              "id": "mueble-grande.nivel-1-div-3",
+              "label": "Div 3"
+            },
+            {
+              "id": "mueble-grande.nivel-1-div-4",
+              "label": "Div 4"
+            }
+          ]
+        },
+        {
+          "nombre": "Estante · Nivel 2",
+          "vista": "grid",
+          "columnas": 4,
+          "slots": [
+            {
+              "id": "mueble-grande.nivel-2-div-1",
+              "label": "Div 1"
+            },
+            {
+              "id": "mueble-grande.nivel-2-div-2",
+              "label": "Div 2"
+            },
+            {
+              "id": "mueble-grande.nivel-2-div-3",
+              "label": "Div 3"
+            },
+            {
+              "id": "mueble-grande.nivel-2-div-4",
+              "label": "Div 4"
+            }
+          ]
+        },
+        {
+          "nombre": "Estante · Nivel 3",
+          "vista": "grid",
+          "columnas": 4,
+          "slots": [
+            {
+              "id": "mueble-grande.nivel-3-div-1",
+              "label": "Div 1"
+            },
+            {
+              "id": "mueble-grande.nivel-3-div-2",
+              "label": "Div 2"
+            },
+            {
+              "id": "mueble-grande.nivel-3-div-3",
+              "label": "Div 3"
+            },
+            {
+              "id": "mueble-grande.nivel-3-div-4",
+              "label": "Div 4"
+            }
+          ]
+        },
+        {
+          "nombre": "Estante · Nivel 4",
+          "vista": "grid",
+          "columnas": 6,
+          "slots": [
+            {
+              "id": "mueble-grande.nivel-4-div-1",
+              "label": "Div 1"
+            },
+            {
+              "id": "mueble-grande.nivel-4-div-2",
+              "label": "Div 2"
+            },
+            {
+              "id": "mueble-grande.nivel-4-div-3",
+              "label": "Div 3"
+            },
+            {
+              "id": "mueble-grande.nivel-4-div-4a",
+              "label": "Div 4-A"
+            },
+            {
+              "id": "mueble-grande.nivel-4-div-4b",
+              "label": "Div 4-B"
+            },
+            {
+              "id": "mueble-grande.nivel-4-div-4c",
+              "label": "Div 4-C"
+            }
+          ]
+        },
+        {
+          "nombre": "Cajonera inferior (4 filas x 4 cajones)",
+          "vista": "grid",
+          "filas": 4,
+          "columnas": 4,
+          "slots": [
+            {
+              "id": "mueble-grande.cajon-f1c1",
+              "label": "F1-C1",
+              "r": 1,
+              "c": 1
+            },
+            {
+              "id": "mueble-grande.cajon-f1c2",
+              "label": "F1-C2",
+              "r": 1,
+              "c": 2
+            },
+            {
+              "id": "mueble-grande.cajon-f1c3",
+              "label": "F1-C3",
+              "r": 1,
+              "c": 3
+            },
+            {
+              "id": "mueble-grande.cajon-f1c4",
+              "label": "F1-C4",
+              "r": 1,
+              "c": 4
+            },
+            {
+              "id": "mueble-grande.cajon-f2c1",
+              "label": "F2-C1",
+              "r": 2,
+              "c": 1
+            },
+            {
+              "id": "mueble-grande.cajon-f2c2",
+              "label": "F2-C2",
+              "r": 2,
+              "c": 2
+            },
+            {
+              "id": "mueble-grande.cajon-f2c3",
+              "label": "F2-C3",
+              "r": 2,
+              "c": 3
+            },
+            {
+              "id": "mueble-grande.cajon-f2c4",
+              "label": "F2-C4",
+              "r": 2,
+              "c": 4
+            },
+            {
+              "id": "mueble-grande.cajon-f3c1",
+              "label": "F3-C1",
+              "r": 3,
+              "c": 1
+            },
+            {
+              "id": "mueble-grande.cajon-f3c2",
+              "label": "F3-C2",
+              "r": 3,
+              "c": 2
+            },
+            {
+              "id": "mueble-grande.cajon-f3c3",
+              "label": "F3-C3",
+              "r": 3,
+              "c": 3
+            },
+            {
+              "id": "mueble-grande.cajon-f3c4",
+              "label": "F3-C4",
+              "r": 3,
+              "c": 4
+            },
+            {
+              "id": "mueble-grande.cajon-f4c1",
+              "label": "F4-C1",
+              "r": 4,
+              "c": 1
+            },
+            {
+              "id": "mueble-grande.cajon-f4c2",
+              "label": "F4-C2",
+              "r": 4,
+              "c": 2
+            },
+            {
+              "id": "mueble-grande.cajon-f4c3",
+              "label": "F4-C3",
+              "r": 4,
+              "c": 3
+            },
+            {
+              "id": "mueble-grande.cajon-f4c4",
+              "label": "F4-C4",
+              "r": 4,
+              "c": 4
+            }
+          ]
+        },
+        {
+          "nombre": "Compresas",
+          "junto": true,
+          "vista": "grid",
+          "columnas": 1,
+          "slots": [
+            {
+              "id": "mueble-grande.compresas",
+              "label": "Compresas"
+            }
+          ]
+        }
+      ],
+      "rol": "guardado"
+    },
+    {
+      "id": "panel-1",
+      "nombre": "Panel de colgantes 1",
+      "nota": "7 niveles",
+      "secciones": [
+        {
+          "nombre": "Niveles",
+          "vista": "lista",
+          "slots": [
+            {
+              "id": "panel-1.nivel-1",
+              "label": "Nivel 1"
+            },
+            {
+              "id": "panel-1.nivel-2",
+              "label": "Nivel 2"
+            },
+            {
+              "id": "panel-1.nivel-3",
+              "label": "Nivel 3"
+            },
+            {
+              "id": "panel-1.nivel-4",
+              "label": "Nivel 4"
+            },
+            {
+              "id": "panel-1.nivel-5",
+              "label": "Nivel 5"
+            },
+            {
+              "id": "panel-1.nivel-6",
+              "label": "Nivel 6"
+            },
+            {
+              "id": "panel-1.nivel-7",
+              "label": "Nivel 7"
+            }
+          ]
+        }
+      ],
+      "rol": "exhibicion"
+    },
+    {
+      "id": "panel-2",
+      "nombre": "Panel de colgantes 2",
+      "nota": "9 niveles",
+      "secciones": [
+        {
+          "nombre": "Niveles",
+          "vista": "lista",
+          "slots": [
+            {
+              "id": "panel-2.nivel-1",
+              "label": "Nivel 1"
+            },
+            {
+              "id": "panel-2.nivel-2",
+              "label": "Nivel 2"
+            },
+            {
+              "id": "panel-2.nivel-3",
+              "label": "Nivel 3"
+            },
+            {
+              "id": "panel-2.nivel-4",
+              "label": "Nivel 4"
+            },
+            {
+              "id": "panel-2.nivel-5",
+              "label": "Nivel 5"
+            },
+            {
+              "id": "panel-2.nivel-6",
+              "label": "Nivel 6"
+            },
+            {
+              "id": "panel-2.nivel-7",
+              "label": "Nivel 7"
+            },
+            {
+              "id": "panel-2.nivel-8",
+              "label": "Nivel 8"
+            },
+            {
+              "id": "panel-2.nivel-9",
+              "label": "Nivel 9"
+            }
+          ]
+        }
+      ],
+      "rol": "exhibicion"
+    },
+    {
+      "id": "panel-3",
+      "nombre": "Panel de colgantes 3",
+      "nota": "7 niveles",
+      "secciones": [
+        {
+          "nombre": "Niveles",
+          "vista": "lista",
+          "slots": [
+            {
+              "id": "panel-3.nivel-1",
+              "label": "Nivel 1"
+            },
+            {
+              "id": "panel-3.nivel-2",
+              "label": "Nivel 2"
+            },
+            {
+              "id": "panel-3.nivel-3",
+              "label": "Nivel 3"
+            },
+            {
+              "id": "panel-3.nivel-4",
+              "label": "Nivel 4"
+            },
+            {
+              "id": "panel-3.nivel-5",
+              "label": "Nivel 5"
+            },
+            {
+              "id": "panel-3.nivel-6",
+              "label": "Nivel 6"
+            },
+            {
+              "id": "panel-3.nivel-7",
+              "label": "Nivel 7"
+            }
+          ]
+        }
+      ],
+      "rol": "exhibicion"
+    },
+    {
+      "id": "deposito-cajas",
+      "nombre": "Mueble de cajas / depósito",
+      "nota": "Guardado de cajas y varios; arriba, estante de dientes acrílicos",
+      "secciones": [
+        {
+          "nombre": "Estante superior",
+          "vista": "lista",
+          "slots": [
+            {
+              "id": "deposito-cajas.estante-superior",
+              "label": "Estante superior",
+              "nota": "Dientes acrílicos (acritones)"
+            }
+          ]
+        },
+        {
+          "nombre": "Cuerpo (guardado)",
+          "vista": "lista",
+          "slots": [
+            {
+              "id": "deposito-cajas.guardado",
+              "label": "Guardado",
+              "nota": "Cajas y varios"
+            }
+          ]
+        }
+      ],
+      "rol": "deposito"
+    },
+    {
+      "id": "deposito-reposicion",
+      "nombre": "Depósito (reposición)",
+      "nota": "Mini depósito atrás — stock de reposición",
+      "secciones": [
+        {
+          "nombre": "Estantes de reposición",
+          "vista": "grid",
+          "columnas": 3,
+          "slots": [
+            {
+              "id": "deposito-reposicion.rep-1",
+              "label": "Rep 1"
+            },
+            {
+              "id": "deposito-reposicion.rep-2",
+              "label": "Rep 2"
+            },
+            {
+              "id": "deposito-reposicion.rep-3",
+              "label": "Rep 3"
+            },
+            {
+              "id": "deposito-reposicion.rep-4",
+              "label": "Rep 4"
+            },
+            {
+              "id": "deposito-reposicion.rep-5",
+              "label": "Rep 5"
+            },
+            {
+              "id": "deposito-reposicion.rep-6",
+              "label": "Rep 6"
+            },
+            {
+              "id": "deposito-reposicion.rep-7",
+              "label": "Rep 7"
+            },
+            {
+              "id": "deposito-reposicion.rep-8",
+              "label": "Rep 8"
+            },
+            {
+              "id": "deposito-reposicion.rep-9",
+              "label": "Rep 9"
+            }
+          ]
+        }
+      ],
+      "rol": "deposito"
+    },
+    {
+      "id": "escritorio",
+      "nombre": "Escritorio",
+      "secciones": [
+        {
+          "nombre": "Escritorio",
+          "vista": "lista",
+          "slots": [
+            {
+              "id": "escritorio.estante",
+              "label": "Estante"
+            },
+            {
+              "id": "escritorio.mostrador-piedras",
+              "label": "Mostrador de piedras"
+            }
+          ]
+        }
+      ],
+      "rol": "exhibicion"
+    }
+  ]
+}

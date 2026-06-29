@@ -1,0 +1,5 @@
+{
+  "_instrucciones": "Copiá este archivo como 'anthropic.json' (sin .ejemplo) y pegá tu API key de Claude. Conseguila en https://console.anthropic.com -> API Keys.",
+  "api_key": "sk-ant-...",
+  "model": "claude-opus-4-8"
+}

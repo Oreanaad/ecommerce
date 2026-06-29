@@ -1,0 +1,4 @@
+{
+  "_descripcion": "Estado local de preparación de pedidos (no toca WooCommerce). preparados: { orderId: { por, fecha } }",
+  "preparados": {}
+}

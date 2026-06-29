@@ -1,0 +1,36 @@
+# ===== Credenciales y secretos — NUNCA se suben =====
+config/woocommerce.json
+config/anthropic.json
+config/resend.json
+config/ml.json
+config/afip/
+*.key
+*.crt
+*.csr
+*.pem
+.env
+
+# ===== Datos de clientes / runtime (PII) — NUNCA se suben =====
+data/usuarios.json
+data/wp-usuarios-seed.json
+data/wp-usuarios-spam-backup.json
+data/catalogo.json
+data/finanzas.json
+data/facturas.json
+data/prospectos.json
+data/descripciones.json
+data/ajustes.json
+data/encargos.json
+data/solicitudes.json
+data/recibir-alias.json
+data/presupuestos.json
+data/ml-tokens.json
+data/ml-items.json
+data/afip-token.json
+data/uploads/
+
+# ===== Otros =====
+node_modules/
+*.log
+.DS_Store
+email-viumi.txt

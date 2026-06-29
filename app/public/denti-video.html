@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Denti · El Pasaje Dental — video</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<style>
+  :root{ --vino:#7a1040; --rosa:#DE3667; --rosa2:#b02060; }
+  *{margin:0;padding:0;box-sizing:border-box;font-family:'Inter',system-ui,sans-serif}
+  html,body{height:100%;background:#1a0712;overflow:hidden}
+  #wrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}
+  #stage{width:1280px;height:720px;position:relative;overflow:hidden;border-radius:18px;
+    background:radial-gradient(120% 120% at 80% 10%, #DE3667 0%, #9c1448 45%, #5e0c30 100%);
+    box-shadow:0 30px 90px rgba(0,0,0,.55)}
+  .deco{position:absolute;border:2px solid rgba(255,255,255,.07);border-radius:50%}
+  .deco.a{width:520px;height:520px;left:-160px;bottom:-200px}
+  .deco.b{width:360px;height:360px;right:-90px;top:-120px}
+  .deco.c{width:240px;height:240px;right:120px;bottom:-90px;border-color:rgba(255,255,255,.05)}
+  .scene{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    text-align:center;padding:0 70px;opacity:0;pointer-events:none}
+  .scene.on{opacity:1}
+  .scene.on .up{animation:up .8s cubic-bezier(.2,.8,.2,1) both}
+  .scene.on .up2{animation:up .8s .15s cubic-bezier(.2,.8,.2,1) both}
+  .scene.on .up3{animation:up .8s .3s cubic-bezier(.2,.8,.2,1) both}
+  .scene.on .pop{animation:pop .7s cubic-bezier(.2,1.2,.3,1) both}
+  @keyframes up{from{opacity:0;transform:translateY(34px)}to{opacity:1;transform:none}}
+  @keyframes pop{from{opacity:0;transform:scale(.6)}to{opacity:1;transform:scale(1)}}
+  @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-16px)}}
+  .kicker{display:inline-block;font-size:18px;font-weight:800;letter-spacing:.22em;text-transform:uppercase;
+    color:#ffd7e8;background:rgba(255,255,255,.12);padding:9px 20px;border-radius:100px;margin-bottom:22px}
+  h1{font-family:'Syne',sans-serif;font-weight:800;color:#fff;line-height:1.02;letter-spacing:-1px}
+  .big{font-size:92px}
+  .huge{font-size:120px}
+  .sub{font-size:30px;color:#ffe3ef;font-weight:600;margin-top:18px;max-width:880px;line-height:1.4}
+  .brandlogo{height:120px;filter:drop-shadow(0 8px 20px rgba(0,0,0,.3))}
+  .denti{height:380px;filter:drop-shadow(0 18px 26px rgba(0,0,0,.4));animation:float 3.2s ease-in-out infinite}
+  .bocadillo{position:relative;background:#fff;color:var(--vino);font-weight:800;font-size:34px;
+    padding:20px 30px;border-radius:22px;box-shadow:0 14px 34px rgba(0,0,0,.25);margin-bottom:18px;min-width:120px}
+  .bocadillo::after{content:"";position:absolute;bottom:-14px;left:50%;transform:translateX(-50%);
+    border:14px solid transparent;border-top-color:#fff;border-bottom:0}
+  .cursor{display:inline-block;width:3px;height:34px;background:var(--rosa);vertical-align:-6px;margin-left:2px;animation:blink .7s steps(1) infinite}
+  @keyframes blink{50%{opacity:0}}
+  .feat{display:flex;flex-direction:column;gap:18px;align-items:stretch;width:760px}
+  .feat .row{display:flex;align-items:center;gap:20px;background:rgba(255,255,255,.12);
+    border:1px solid rgba(255,255,255,.18);border-radius:18px;padding:18px 24px;opacity:0;transform:translateX(-40px)}
+  .scene.on .feat .row{animation:slidein .6s both}
+  .scene.on .feat .row:nth-child(1){animation-delay:.1s}
+  .scene.on .feat .row:nth-child(2){animation-delay:.35s}
+  .scene.on .feat .row:nth-child(3){animation-delay:.6s}
+  .scene.on .feat .row:nth-child(4){animation-delay:.85s}
+  @keyframes slidein{to{opacity:1;transform:none}}
+  .feat .ico{font-size:40px;width:56px;text-align:center}
+  .feat .tx{font-size:27px;font-weight:800;color:#fff;text-align:left}
+  .feat .tx small{display:block;font-size:17px;font-weight:600;color:#ffd0e2;margin-top:2px}
+  .chat{width:430px;background:#fff;border-radius:24px;overflow:hidden;box-shadow:0 28px 70px rgba(0,0,0,.45);text-align:left}
+  .chat .head{background:linear-gradient(135deg,var(--vino),var(--rosa));color:#fff;padding:16px 20px;display:flex;gap:13px;align-items:center}
+  .chat .head img{width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,.9);padding:3px;object-fit:contain}
+  .chat .head b{font-size:18px}.chat .head small{display:block;opacity:.9;font-size:13px}
+  .chat .body{background:#fff7fb;padding:16px;min-height:230px;display:flex;flex-direction:column;gap:10px}
+  .msg{font-size:16px;line-height:1.45;border-radius:16px;padding:12px 15px;max-width:88%}
+  .msg.bot{background:#fff;border:1px solid #f0dbe7;color:#334155;align-self:flex-start;border-top-left-radius:5px}
+  .msg.user{background:var(--rosa);color:#fff;align-self:flex-end;border-bottom-right-radius:5px;opacity:0;transform:translateY(12px)}
+  .msg.bot.ans{opacity:0;transform:translateY(12px)}
+  .scene.on .msg.user{animation:up .5s 1.2s both}
+  .scene.on .msg.bot.ans{animation:up .6s 2.6s both}
+  .typing{align-self:flex-start;background:#fff;border:1px solid #f0dbe7;border-radius:16px;padding:14px 16px;opacity:0}
+  .scene.on .typing{animation:showhide 1.2s 1.9s both}
+  @keyframes showhide{0%{opacity:0}15%{opacity:1}85%{opacity:1}100%{opacity:0}}
+  .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#c9a9b9;margin:0 2px;animation:bd 1s infinite}
+  .dot:nth-child(2){animation-delay:.2s}.dot:nth-child(3){animation-delay:.4s}
+  @keyframes bd{0%,100%{transform:translateY(0);opacity:.5}50%{transform:translateY(-5px);opacity:1}}
+  .url{font-family:'Syne',sans-serif;font-weight:800;font-size:46px;color:#fff;margin-top:10px;letter-spacing:.5px}
+  .web{font-size:26px;color:#fff;font-weight:700}
+  #bar{position:absolute;left:0;bottom:0;height:5px;width:0;background:#fff;opacity:.85}
+  #controls{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);display:flex;gap:10px;z-index:9}
+  #controls button{background:#DE3667;color:#fff;border:none;border-radius:100px;padding:11px 22px;font-size:15px;font-weight:800;cursor:pointer;box-shadow:0 8px 20px rgba(0,0,0,.3)}
+  #controls button.alt{background:rgba(255,255,255,.15)}
+  .hint{position:fixed;top:14px;left:50%;transform:translateX(-50%);color:#fff9;font-size:13px;z-index:9;text-align:center}
+</style>
+</head>
+<body>
+<div class="hint">Pantalla completa (⛶) y grabá la pantalla para tu video</div>
+<div id="wrap"><div id="stage">
+  <div class="deco a"></div><div class="deco b"></div><div class="deco c"></div>
+
+  <section class="scene" data-dur="3200">
+    <img class="brandlogo up pop" src="/assets/logo.png" alt="El Pasaje Dental" onerror="this.style.display='none'">
+    <h1 class="big up2" style="margin-top:18px">El Pasaje Dental</h1>
+    <div class="sub up3">Insumos odontológicos · Tucumán, Argentina</div>
+  </section>
+
+  <section class="scene" data-dur="3600">
+    <div class="kicker up">Te presentamos a</div>
+    <img class="denti pop" src="/assets/denti-1.png" onerror="this.src='/assets/denti-3.png'">
+    <h1 class="huge up2" style="margin-top:6px">Denti 🦷</h1>
+    <div class="sub up3">Tu asistente con <b>inteligencia artificial</b></div>
+  </section>
+
+  <section class="scene" data-dur="3800">
+    <div class="bocadillo up2"><span id="saludoTxt"></span><span class="cursor"></span></div>
+    <img class="denti pop" src="/assets/denti-1.png" onerror="this.src='/assets/denti-3.png'">
+  </section>
+
+  <section class="scene" data-dur="5200" style="flex-direction:row;justify-content:center;gap:60px">
+    <div class="chat pop">
+      <div class="head"><img src="/assets/denti-1.png" onerror="this.src='/assets/denti-3.png'"><div><b>¡Hola! Soy Denti 🦷</b><small>¿Te puedo ayudar?</small></div></div>
+      <div class="body">
+        <div class="msg bot">Preguntame lo que quieras sobre productos o materiales 🦷</div>
+        <div class="msg user">¿Qué alginato de fraguado rápido me recomendás?</div>
+        <div class="typing"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+        <div class="msg bot ans">Para fraguado rápido te conviene un <b>alginato tipo I (fast set)</b>, como el <b>Tropicalgin</b>: fragua en ~1 minuto, ideal para impresiones veloces. Lo tenemos en la tienda 🦷</div>
+      </div>
+    </div>
+    <div style="text-align:left;max-width:430px" class="up3">
+      <h1 style="font-size:52px">Preguntale<br>en lenguaje normal</h1>
+      <div class="sub" style="margin-top:16px">Responde al instante, las <b>24 horas</b>.</div>
+    </div>
+  </section>
+
+  <section class="scene" data-dur="4600">
+    <h1 class="up" style="font-size:56px;margin-bottom:30px">¿Por qué te va a encantar?</h1>
+    <div class="feat">
+      <div class="row"><div class="ico">💬</div><div class="tx">Preguntás en lenguaje normal<small>Sin menús ni vueltas</small></div></div>
+      <div class="row"><div class="ico">📚</div><div class="tx">Sabe de productos y materiales<small>Entrenado con el catálogo de la tienda</small></div></div>
+      <div class="row"><div class="ico">🎓</div><div class="tx">Para estudiantes y profesionales<small>Te orienta según lo que necesitás</small></div></div>
+      <div class="row"><div class="ico">⏰</div><div class="tx">Disponible 24/7, gratis<small>Siempre a un toque, en cada página</small></div></div>
+    </div>
+  </section>
+
+  <section class="scene" data-dur="4200">
+    <img class="denti pop" style="height:340px" src="/assets/denti-trofeo.png" onerror="this.src='/assets/denti-1.png'">
+    <h1 class="up2" style="font-size:60px;margin-top:6px">Probá a Denti hoy</h1>
+    <div class="url up3">elpasajedental.com</div>
+    <div class="web up3" style="margin-top:8px;opacity:.85">🦷 Insumos odontológicos · Envíos a todo el país</div>
+  </section>
+
+  <div id="bar"></div>
+</div></div>
+
+<div id="controls">
+  <button id="play">▶ Reproducir</button>
+  <button id="full" class="alt">⛶ Pantalla completa</button>
+</div>
+
+<script>
+  const stage = document.getElementById('stage');
+  function fit(){ const s = Math.min(innerWidth/1280, innerHeight/720)*0.96; stage.style.transform = 'scale('+s+')'; }
+  addEventListener('resize', fit); fit();
+  const scenes = [...document.querySelectorAll('.scene')];
+  const bar = document.getElementById('bar');
+  const SALUDO = "¡Hola! Soy Denti 🦷";
+  let timer, raf;
+  function typeSaludo(ms){
+    const el = document.getElementById('saludoTxt'); if(!el) return;
+    el.textContent=''; const chars=[...SALUDO]; let i=0;
+    const step = Math.max(40, (ms-1200)/chars.length);
+    (function tick(){ if(i<=chars.length){ el.textContent = chars.slice(0,i).join(''); i++; setTimeout(tick, step);} })();
+  }
+  function playScene(idx){
+    scenes.forEach(s=>s.classList.remove('on'));
+    if(idx>=scenes.length){ document.getElementById('play').textContent='↻ Repetir'; bar.style.width='100%'; return; }
+    const sc = scenes[idx]; sc.classList.add('on');
+    const dur = +sc.dataset.dur || 3500;
+    if(sc.querySelector('#saludoTxt')) typeSaludo(dur);
+    const total = scenes.reduce((a,s)=>a+(+s.dataset.dur||3500),0);
+    const before = scenes.slice(0,idx).reduce((a,s)=>a+(+s.dataset.dur||3500),0);
+    const t0 = performance.now();
+    cancelAnimationFrame(raf);
+    (function prog(){ const e=performance.now()-t0; bar.style.width = Math.min(100,(before+Math.min(e,dur))/total*100)+'%'; if(e<dur) raf=requestAnimationFrame(prog); })();
+    timer = setTimeout(()=>playScene(idx+1), dur);
+  }
+  function start(){ clearTimeout(timer); document.getElementById('play').textContent='■ Reproduciendo…'; playScene(0); }
+  document.getElementById('play').onclick = start;
+  document.getElementById('full').onclick = ()=>{ (document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen()); };
+  setTimeout(start, 600);
+</script>
+</body>
+</html>

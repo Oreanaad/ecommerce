@@ -1,0 +1,4 @@
+{
+  "_descripcion": "Asignaciones producto -> slot. Cada item: { productId, slotId, nota }. Un producto puede estar en varios slots (ej. exhibido + reposicion).",
+  "asignaciones": []
+}
