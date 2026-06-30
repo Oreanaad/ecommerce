@@ -7,7 +7,8 @@
   "scripts": {
     "start": "node app/server.mjs",
     "sync": "node scripts/sync.mjs",
-    "migrar": "node scripts/migrar-wc.mjs"
+    "migrar": "node scripts/migrar-wc.mjs",
+    "seed": "node scripts/seed-parametros.mjs"
   },
   "engines": {
     "node": ">=20"

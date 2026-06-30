@@ -16,6 +16,8 @@ import {
   crearPedido, getPedido, getPedidos, updatePedidoStatus, updatePedido,
   getCliente, upsertCliente, getClientes, buscarClientes, actualizarCliente,
   getCupones, getCupon, crearCupon, borrarCupon, incrementarUsoCupon,
+  getEstructuraCompleta, listArticulos, getArticuloDetalle,
+  crearArticulo, actualizarArticulo, setArticuloAtributos, setArticuloModelos,
 } from "./db.mjs";
 import { crearAuth } from "./auth.mjs";
 import { crearML } from "./ml.mjs";
@@ -2942,6 +2944,47 @@ document.getElementById("f").addEventListener("change",async e=>{
     }
   }
 
+  // ─── Artículos / clasificación ───────────────────────────────────────────────
+  if (u.pathname === "/api/admin/param/estructura" && esStaff) {
+    try { return send(res, 200, await getEstructuraCompleta()); }
+    catch (e) { return send(res, 500, { error: e.message }); }
+  }
+  if (u.pathname === "/api/admin/articulos" && req.method === "GET" && esStaff) {
+    try {
+      const q = u.searchParams.get("q") || "";
+      const grupo_id = u.searchParams.get("grupo") || null;
+      const page = Number(u.searchParams.get("page") || 1);
+      return send(res, 200, await listArticulos({ q, grupo_id, page }));
+    } catch (e) { return send(res, 500, { error: e.message }); }
+  }
+  if (u.pathname === "/api/admin/articulos" && req.method === "POST" && esStaff) {
+    try {
+      const b = await readBody(req);
+      const art = await crearArticulo(b);
+      if (b.atributos?.length) await setArticuloAtributos(art.id, b.atributos);
+      if (b.modelos?.length)   await setArticuloModelos(art.id, b.modelos);
+      return send(res, 200, { ok: true, id: art.id });
+    } catch (e) { return send(res, 500, { error: e.message }); }
+  }
+  if (u.pathname.startsWith("/api/admin/articulos/") && req.method === "PUT" && esStaff) {
+    try {
+      const id = Number(u.pathname.split("/")[4]);
+      const b = await readBody(req);
+      await actualizarArticulo(id, b);
+      if (b.atributos !== undefined) await setArticuloAtributos(id, b.atributos || []);
+      if (b.modelos !== undefined)   await setArticuloModelos(id, b.modelos || []);
+      return send(res, 200, { ok: true });
+    } catch (e) { return send(res, 500, { error: e.message }); }
+  }
+  if (u.pathname.startsWith("/api/admin/articulos/") && req.method === "GET" && esStaff) {
+    try {
+      const id = Number(u.pathname.split("/")[4]);
+      const art = await getArticuloDetalle(id);
+      if (!art) return send(res, 404, { error: "No encontrado" });
+      return send(res, 200, art);
+    } catch (e) { return send(res, 500, { error: e.message }); }
+  }
+
   // ---- Estaticos ----
   let path = u.pathname === "/" ? "/index.html" : u.pathname;
   try {
@@ -2977,6 +3020,17 @@ async function prepararDatos() {
   // Mergea usuarios + claves de WordPress (idempotente: solo rellena huecos, no pisa contraseñas propias)
   try { const r = await AUTH.importarSeedWP(); if (r.ok) console.log(`[wp] usuarios merge: +${r.nuevos} nuevos, +${r.claves} claves, total ${r.total}`); }
   catch (e) { console.log("[wp] no se pudo mergear el seed:", e.message); }
+  // Seed del admin por defecto (solo si el usuario no tiene clave establecida)
+  if (process.env.ADMIN_SEED_EMAIL && process.env.ADMIN_SEED_PASS) {
+    try {
+      const usuarios = await AUTH.leerUsuarios();
+      const ya = (usuarios.usuarios || []).find(u => (u.email||"").toLowerCase() === process.env.ADMIN_SEED_EMAIL.toLowerCase());
+      if (!ya || !ya.clave) {
+        await AUTH.setClave(process.env.ADMIN_SEED_EMAIL, process.env.ADMIN_SEED_PASS);
+        console.log("[auth] admin seedeado:", process.env.ADMIN_SEED_EMAIL);
+      }
+    } catch (e) { console.log("[auth] seed error:", e.message); }
+  }
 }
 
 await prepararDatos();

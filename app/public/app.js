@@ -27,8 +27,8 @@ let ROL_ADMIN = "dueno";
   }
 })();
 
-async function api(path, body) {
-  const res = await fetch(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+async function api(path, body, method = "POST") {
+  const res = await fetch(path, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
   return res.json();
 }
 function toast(msg) {
@@ -797,7 +797,7 @@ function activarTab(name, fromHash) {
   // resaltar el grupo del menú al que pertenece y cerrar desplegables
   $$(".tabgroup").forEach((g) => { g.classList.toggle("active-group", !!g.querySelector(".tab.active")); g.classList.remove("open"); });
   if (!fromHash && location.hash !== "#" + name) location.hash = name; // URL propia por opción
-  const loaders = { carga: initCarga, piedras: renderPiedras, transferir: renderTransferir, mapa: renderMapa, pedidos: cargarPedidos, ml: cargarML, clientes: cargarClientes, ajustes: cargarAjustes, stats: cargarEstadisticas, finanzas: cargarFinanzas, vencimientos: cargarVencimientos, reparto: cargarReparto, campanas: cargarCampanas, venta: cargarVenta, foto: cargarRecibir, solicitudes: cargarSolicitudes, encargos: cargarEncargos, redes: cargarRedes, promos: cargarPromos, inventario: cargarInventario };
+  const loaders = { carga: initCarga, piedras: renderPiedras, transferir: renderTransferir, mapa: renderMapa, pedidos: cargarPedidos, ml: cargarML, clientes: cargarClientes, ajustes: cargarAjustes, stats: cargarEstadisticas, finanzas: cargarFinanzas, vencimientos: cargarVencimientos, reparto: cargarReparto, campanas: cargarCampanas, venta: cargarVenta, foto: cargarRecibir, solicitudes: cargarSolicitudes, encargos: cargarEncargos, redes: cargarRedes, promos: cargarPromos, inventario: cargarInventario, articulos: cargarArticulos };
   if (loaders[name]) loaders[name]();
 }
 $$(".tab").forEach((t) => t.onclick = () => activarTab(t.dataset.tab));
@@ -4312,6 +4312,247 @@ if (btnSync) btnSync.onclick = async () => {
     else toast(r.error || "No se pudo actualizar");
   } catch { toast("No se pudo actualizar"); }
   btnSync.disabled = false; btnSync.textContent = prev;
+};
+
+// ─── ARTÍCULOS (alta y listado con clasificación paramétrica) ────────────────
+let ART_STRUCT = null; // cache de grupos, atributos, marcas, colores, modelos
+let ART_EDIT_ID = null; // null = nuevo, number = editar
+
+async function cargarArticulos() {
+  if (!ART_STRUCT) {
+    ART_STRUCT = await (await fetch("/api/admin/param/estructura")).json();
+    artPoblarFiltros();
+  }
+  await artCargarLista();
+}
+
+function artPoblarFiltros() {
+  const gf = $("#art-grupo-fil");
+  ART_STRUCT.grupos.forEach(g => {
+    const o = document.createElement("option"); o.value = g.id; o.textContent = `${g.id}. ${g.nombre}`; gf.appendChild(o);
+  });
+  // Formulario: grupo
+  const afg = $("#af-grupo");
+  ART_STRUCT.grupos.forEach(g => { const o = document.createElement("option"); o.value = g.id; o.textContent = `${g.id}. ${g.nombre}`; afg.appendChild(o); });
+  // Formulario: marca
+  const afm = $("#af-marca");
+  ART_STRUCT.marcas_prod.forEach(m => { const o = document.createElement("option"); o.value = m.id; o.textContent = m.nombre; afm.appendChild(o); });
+  // Formulario: compat marca
+  const acm = $("#af-compat-marca");
+  ART_STRUCT.marcas_dispositivo.forEach(m => { const o = document.createElement("option"); o.value = m.id; o.textContent = m.nombre; acm.appendChild(o); });
+
+  // Cascada grupo → subgrupo → categoria → subcategoria
+  $("#af-grupo").onchange = () => artCascada("grupo");
+  $("#af-subgrupo").onchange = () => artCascada("subgrupo");
+  $("#af-categoria").onchange = () => artCascada("categoria");
+  // Cascada compat marca → linea → modelos
+  $("#af-compat-marca").onchange = () => artCompatMarca();
+  $("#af-compat-linea").onchange = () => artCompatModelos();
+
+  // Atributos: renderizar grupos colapsables
+  const wrap = $("#af-attrs-grupos");
+  wrap.innerHTML = "";
+  ART_STRUCT.grupos_param.forEach(gp => {
+    const attrs = ART_STRUCT.atributos.filter(a => a.grupo_param_id === gp.id);
+    if (!attrs.length) return;
+    const det = document.createElement("details"); det.className = "af-gp"; det.dataset.gpId = gp.id;
+    const sum = document.createElement("summary"); sum.textContent = gp.nombre;
+    det.appendChild(sum);
+    attrs.forEach(a => {
+      const div = document.createElement("div"); div.className = "af-attr-row";
+      const lbl = document.createElement("label"); lbl.textContent = a.nombre;
+      let inp;
+      if (a.tipo === "number") {
+        inp = document.createElement("input"); inp.type = "number"; inp.min = "0"; inp.step = "any";
+        inp.dataset.atributoId = a.id; inp.dataset.tipo = "number"; inp.className = "af-inp";
+      } else if (a.tipo === "text") {
+        inp = document.createElement("input"); inp.type = "text";
+        inp.dataset.atributoId = a.id; inp.dataset.tipo = "text"; inp.className = "af-inp";
+      } else {
+        inp = document.createElement("select");
+        const emp = document.createElement("option"); emp.value = ""; emp.textContent = "—"; inp.appendChild(emp);
+        (a.valores || []).forEach(v => { const o = document.createElement("option"); o.value = v.id; o.textContent = `${v.codigo}. ${v.valor}`; inp.appendChild(o); });
+        inp.dataset.atributoId = a.id; inp.dataset.tipo = "enum"; inp.className = "af-inp";
+      }
+      lbl.appendChild(inp); div.appendChild(lbl); det.appendChild(div);
+    });
+    wrap.appendChild(det);
+  });
+}
+
+function artCascada(nivel) {
+  const grupoId  = +$("#af-grupo").value || null;
+  const subgId   = +$("#af-subgrupo").value || null;
+  const catId    = +$("#af-categoria").value || null;
+
+  if (nivel === "grupo") {
+    const sg = $("#af-subgrupo"); sg.innerHTML = '<option value="">—</option>';
+    ART_STRUCT.subgrupos.filter(s => s.grupo_id == grupoId).forEach(s => { const o = document.createElement("option"); o.value = s.id; o.textContent = `${s.numero}. ${s.nombre}`; sg.appendChild(o); });
+    const cf = $("#af-categoria"); cf.innerHTML = '<option value="">—</option>';
+    const sc = $("#af-subcategoria"); sc.innerHTML = '<option value="">—</option>';
+  }
+  if (nivel === "grupo" || nivel === "subgrupo") {
+    const cf = $("#af-categoria"); cf.innerHTML = '<option value="">—</option>';
+    const sgSel = +$("#af-subgrupo").value || null;
+    ART_STRUCT.categorias.filter(c => c.subgrupo_id == sgSel).forEach(c => { const o = document.createElement("option"); o.value = c.id; o.textContent = `${c.numero || ""}. ${c.nombre}`; cf.appendChild(o); });
+    const sc = $("#af-subcategoria"); sc.innerHTML = '<option value="">—</option>';
+  }
+  if (nivel === "categoria") {
+    const sc = $("#af-subcategoria"); sc.innerHTML = '<option value="">—</option>';
+    const cSel = +$("#af-categoria").value || null;
+    ART_STRUCT.subcategorias.filter(s => s.categoria_id == cSel).forEach(s => { const o = document.createElement("option"); o.value = s.id; o.textContent = `${s.numero || ""}. ${s.nombre}`; sc.appendChild(o); });
+  }
+}
+
+function artCompatMarca() {
+  const marcaId = +$("#af-compat-marca").value || null;
+  const sl = $("#af-compat-linea"); sl.innerHTML = '<option value="">Todas</option>';
+  if (marcaId) {
+    ART_STRUCT.lineas_dispositivo.filter(l => l.marca_id == marcaId).forEach(l => { const o = document.createElement("option"); o.value = l.id; o.textContent = l.nombre; sl.appendChild(o); });
+  }
+  artCompatModelos();
+}
+
+function artCompatModelos() {
+  const marcaId = +$("#af-compat-marca").value || null;
+  const lineaId = +$("#af-compat-linea").value || null;
+  const grid = $("#af-modelos-grid"); grid.innerHTML = "";
+  if (!marcaId) return;
+  const mods = ART_STRUCT.modelos_dispositivo.filter(m => m.marca_id == marcaId && (!lineaId || m.linea_id == lineaId));
+  mods.forEach(m => {
+    const l = document.createElement("label"); l.className = "af-modelo-chk";
+    const cb = document.createElement("input"); cb.type = "checkbox"; cb.value = m.id; cb.name = "modelo";
+    l.appendChild(cb); l.appendChild(document.createTextNode(m.nombre)); grid.appendChild(l);
+  });
+}
+
+async function artCargarLista() {
+  const q = $("#art-q").value.trim();
+  const grupo = $("#art-grupo-fil").value;
+  const url = `/api/admin/articulos?q=${encodeURIComponent(q)}&grupo=${grupo}`;
+  const lista = await (await fetch(url)).json();
+  const wrap = $("#art-lista");
+  if (!lista.length) { wrap.innerHTML = '<p class="meta" style="padding:16px">Sin artículos. Creá el primero.</p>'; return; }
+  wrap.innerHTML = `<table class="art-table"><thead><tr><th>SKU</th><th>Nombre</th><th>Grupo</th><th>Subgrupo</th><th>Marca</th><th>Venta</th><th>Stock</th><th></th></tr></thead><tbody>
+    ${lista.map(a => `<tr>
+      <td class="meta">${esc(a.sku||"")}</td>
+      <td>${esc(a.nombre)}</td>
+      <td class="meta">${esc(a.grupo||"")}</td>
+      <td class="meta">${esc(a.subgrupo||"")}</td>
+      <td class="meta">${esc(a.marca||"")}</td>
+      <td>$${num(a.precio||0)}</td>
+      <td>${a.stock??0}</td>
+      <td><button class="btn ghost xs" data-art-id="${a.id}">✏️ Editar</button></td>
+    </tr>`).join("")}
+  </tbody></table>`;
+  wrap.querySelectorAll("[data-art-id]").forEach(b => b.onclick = () => artAbrirEditar(+b.dataset.artId));
+}
+
+function artAbrirFormulario(titulo) {
+  $("#art-drawer-title").textContent = titulo;
+  $("#art-drawer").classList.remove("hidden");
+  $("#af-feedback").textContent = "";
+}
+
+function artCerrarDrawer() { $("#art-drawer").classList.add("hidden"); ART_EDIT_ID = null; }
+
+function artLimpiarForm() {
+  $("#af-nombre").value = ""; $("#af-sku").value = ""; $("#af-descripcion").value = "";
+  $("#af-precio").value = ""; $("#af-costo").value = ""; $("#af-stock").value = "0";
+  $("#af-grupo").value = ""; $("#af-subgrupo").value = ""; $("#af-categoria").value = ""; $("#af-subcategoria").value = "";
+  $("#af-marca").value = "";
+  artCascada("grupo");
+  $$(".af-inp").forEach(i => { if (i.tagName === "SELECT") i.value = ""; else i.value = ""; });
+  $$(".af-modelo-chk input").forEach(c => c.checked = false);
+}
+
+async function artAbrirEditar(id) {
+  artLimpiarForm(); ART_EDIT_ID = id;
+  const art = await (await fetch(`/api/admin/articulos/${id}`)).json();
+  artAbrirFormulario(`Editar artículo #${id}`);
+  $("#af-nombre").value = art.nombre || "";
+  $("#af-sku").value = art.sku || "";
+  $("#af-descripcion").value = art.descripcion || "";
+  $("#af-precio").value = art.precio || "";
+  $("#af-costo").value = art.precio_regular || "";
+  $("#af-stock").value = art.stock ?? 0;
+  if (art.grupo_id) { $("#af-grupo").value = art.grupo_id; artCascada("grupo"); }
+  if (art.subgrupo_id) { await new Promise(r=>setTimeout(r,0)); $("#af-subgrupo").value = art.subgrupo_id; artCascada("subgrupo"); }
+  if (art.categoria_jer_id) { await new Promise(r=>setTimeout(r,0)); $("#af-categoria").value = art.categoria_jer_id; artCascada("categoria"); }
+  if (art.subcategoria_jer_id) { await new Promise(r=>setTimeout(r,0)); $("#af-subcategoria").value = art.subcategoria_jer_id; }
+  if (art.marca_prod_id) $("#af-marca").value = art.marca_prod_id;
+  // Restaurar atributos
+  (art.atributos || []).forEach(a => {
+    const inp = $(`.af-inp[data-atributo-id="${a.atributo_id}"]`);
+    if (!inp) return;
+    if (a.tipo === "number" || inp.dataset.tipo === "number") inp.value = a.valor_num || "";
+    else if (inp.dataset.tipo === "text") inp.value = a.valor_texto || "";
+    else inp.value = a.valor_id || "";
+  });
+  // Restaurar modelos
+  const modeloIds = new Set((art.modelos||[]).map(m=>m.modelo_id));
+  if (modeloIds.size > 0) {
+    const primero = art.modelos[0];
+    const md = ART_STRUCT.modelos_dispositivo.find(m => m.id === primero.modelo_id);
+    if (md) {
+      $("#af-compat-marca").value = md.marca_id; artCompatMarca();
+      await new Promise(r=>setTimeout(r,0));
+      $$(".af-modelo-chk input").forEach(c => { if (modeloIds.has(+c.value)) c.checked = true; });
+    }
+  }
+}
+
+function artRecogerFormData() {
+  const atributos = [];
+  $$(".af-inp").forEach(inp => {
+    const aId = +inp.dataset.atributoId;
+    if (!aId) return;
+    const tipo = inp.dataset.tipo;
+    const v = inp.value;
+    if (!v) return;
+    if (tipo === "number") atributos.push({ atributo_id: aId, valor_num: +v });
+    else if (tipo === "text") atributos.push({ atributo_id: aId, valor_texto: v });
+    else atributos.push({ atributo_id: aId, valor_id: +v });
+  });
+  const modelos = [...$$(".af-modelo-chk input:checked")].map(c => +c.value);
+  return {
+    nombre: $("#af-nombre").value.trim(),
+    sku: $("#af-sku").value.trim(),
+    descripcion: $("#af-descripcion").value.trim(),
+    grupo_id: +$("#af-grupo").value || null,
+    subgrupo_id: +$("#af-subgrupo").value || null,
+    categoria_jer_id: +$("#af-categoria").value || null,
+    subcategoria_jer_id: +$("#af-subcategoria").value || null,
+    marca_prod_id: +$("#af-marca").value || null,
+    precio: +$("#af-precio").value || 0,
+    precio_regular: +$("#af-costo").value || 0,
+    stock: +$("#af-stock").value || 0,
+    atributos, modelos,
+  };
+}
+
+$("#art-nuevo").onclick = () => { artLimpiarForm(); ART_EDIT_ID = null; artAbrirFormulario("Nuevo artículo"); };
+$("#art-buscar").onclick = artCargarLista;
+$("#art-q").onkeydown = e => { if (e.key === "Enter") artCargarLista(); };
+$("#art-drawer-cerrar").onclick = artCerrarDrawer;
+$("#art-drawer-cerrar2").onclick = artCerrarDrawer;
+
+$("#art-form").onsubmit = async (e) => {
+  e.preventDefault();
+  const datos = artRecogerFormData();
+  if (!datos.nombre) return;
+  const fb = $("#af-feedback"); fb.textContent = "Guardando…";
+  try {
+    if (ART_EDIT_ID) {
+      await api(`/api/admin/articulos/${ART_EDIT_ID}`, datos, "PUT");
+      fb.textContent = "✓ Guardado";
+    } else {
+      const r = await api("/api/admin/articulos", datos);
+      fb.textContent = `✓ Creado (#${r.id})`;
+    }
+    await artCargarLista();
+    if (!ART_EDIT_ID) { artLimpiarForm(); }
+  } catch (e2) { fb.textContent = "Error: " + e2.message; }
 };
 
 // Cerrar sesión

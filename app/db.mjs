@@ -156,6 +156,165 @@ export async function initDb() {
       creado_en        TIMESTAMPTZ DEFAULT NOW()
     );
   `);
+
+  // ── Schema de clasificación de artículos (PARAMETROS_2d) ─────────────────
+  await db.query(`
+    -- Jerarquía de producto (4 niveles)
+    CREATE TABLE IF NOT EXISTS grupos (
+      id      SMALLINT PRIMARY KEY,
+      letra   CHAR(1),
+      nombre  VARCHAR(60) NOT NULL,
+      activo  BOOLEAN DEFAULT TRUE
+    );
+
+    CREATE TABLE IF NOT EXISTS subgrupos (
+      id        SERIAL PRIMARY KEY,
+      grupo_id  SMALLINT NOT NULL REFERENCES grupos(id),
+      numero    SMALLINT NOT NULL,
+      nombre    VARCHAR(100) NOT NULL,
+      activo    BOOLEAN DEFAULT TRUE,
+      UNIQUE(grupo_id, numero)
+    );
+
+    CREATE TABLE IF NOT EXISTS categorias_jerarquia (
+      id           SERIAL PRIMARY KEY,
+      subgrupo_id  INT NOT NULL REFERENCES subgrupos(id),
+      numero       SMALLINT,
+      nombre       VARCHAR(100) NOT NULL,
+      activo       BOOLEAN DEFAULT TRUE
+    );
+
+    CREATE TABLE IF NOT EXISTS subcategorias (
+      id            SERIAL PRIMARY KEY,
+      categoria_id  INT NOT NULL REFERENCES categorias_jerarquia(id),
+      numero        SMALLINT,
+      nombre        VARCHAR(100) NOT NULL,
+      activo        BOOLEAN DEFAULT TRUE
+    );
+
+    -- Sistema EAV de parámetros
+    CREATE TABLE IF NOT EXISTS grupos_param (
+      id      SMALLINT PRIMARY KEY,
+      codigo  CHAR(2) NOT NULL,
+      nombre  VARCHAR(50) NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS atributos (
+      id              SERIAL PRIMARY KEY,
+      grupo_param_id  SMALLINT NOT NULL REFERENCES grupos_param(id),
+      nombre          VARCHAR(100) NOT NULL UNIQUE,
+      tipo            VARCHAR(20) NOT NULL DEFAULT 'enum',
+      activo          BOOLEAN DEFAULT TRUE
+    );
+
+    CREATE TABLE IF NOT EXISTS valores_atributo (
+      id           SERIAL PRIMARY KEY,
+      atributo_id  INT NOT NULL REFERENCES atributos(id) ON DELETE CASCADE,
+      codigo       VARCHAR(20) NOT NULL,
+      valor        VARCHAR(200) NOT NULL,
+      sinonimos    TEXT,
+      activo       BOOLEAN DEFAULT TRUE,
+      UNIQUE(atributo_id, codigo)
+    );
+
+    -- Marcas del catálogo de productos
+    CREATE TABLE IF NOT EXISTS marcas_prod (
+      id      SMALLINT PRIMARY KEY,
+      nombre  VARCHAR(100) NOT NULL UNIQUE,
+      activo  BOOLEAN DEFAULT TRUE
+    );
+
+    -- Paleta de colores unificada
+    CREATE TABLE IF NOT EXISTS colores (
+      id        SMALLINT PRIMARY KEY,
+      nombre    VARCHAR(100) NOT NULL UNIQUE,
+      sinonimos TEXT,
+      activo    BOOLEAN DEFAULT TRUE
+    );
+
+    -- Dimensiones / tamaños
+    CREATE TABLE IF NOT EXISTS dimensiones (
+      id        SERIAL PRIMARY KEY,
+      tipo      VARCHAR(60) NOT NULL,
+      valor     VARCHAR(50) NOT NULL,
+      codigo    VARCHAR(10),
+      sinonimo  TEXT,
+      activo    BOOLEAN DEFAULT TRUE
+    );
+
+    -- Compatibilidad con dispositivos
+    CREATE TABLE IF NOT EXISTS marcas_dispositivo (
+      id      SERIAL PRIMARY KEY,
+      nombre  VARCHAR(50) NOT NULL UNIQUE
+    );
+
+    CREATE TABLE IF NOT EXISTS lineas_dispositivo (
+      id        SERIAL PRIMARY KEY,
+      marca_id  INT NOT NULL REFERENCES marcas_dispositivo(id),
+      nombre    VARCHAR(60) NOT NULL,
+      UNIQUE(marca_id, nombre)
+    );
+
+    CREATE TABLE IF NOT EXISTS modelos_dispositivo (
+      id            SERIAL PRIMARY KEY,
+      marca_id      INT NOT NULL REFERENCES marcas_dispositivo(id),
+      linea_id      INT REFERENCES lineas_dispositivo(id),
+      cod_modelo    VARCHAR(60) UNIQUE,
+      nombre        VARCHAR(200) NOT NULL,
+      conectividad  VARCHAR(20),
+      activo        BOOLEAN DEFAULT TRUE
+    );
+
+    -- Relaciones producto ↔ clasificación
+    CREATE TABLE IF NOT EXISTS producto_atributos (
+      producto_id  INT NOT NULL REFERENCES productos(id) ON DELETE CASCADE,
+      atributo_id  INT NOT NULL REFERENCES atributos(id),
+      valor_id     INT REFERENCES valores_atributo(id),
+      valor_num    NUMERIC,
+      valor_texto  TEXT,
+      PRIMARY KEY (producto_id, atributo_id)
+    );
+
+    CREATE TABLE IF NOT EXISTS producto_modelos (
+      producto_id  INT NOT NULL REFERENCES productos(id) ON DELETE CASCADE,
+      modelo_id    INT NOT NULL REFERENCES modelos_dispositivo(id),
+      PRIMARY KEY (producto_id, modelo_id)
+    );
+
+    CREATE TABLE IF NOT EXISTS producto_compat_marca (
+      id           SERIAL PRIMARY KEY,
+      producto_id  INT NOT NULL REFERENCES productos(id) ON DELETE CASCADE,
+      marca_id     INT NOT NULL REFERENCES marcas_dispositivo(id),
+      linea_id     INT REFERENCES lineas_dispositivo(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS producto_imagenes (
+      id            SERIAL PRIMARY KEY,
+      producto_id   INT NOT NULL REFERENCES productos(id) ON DELETE CASCADE,
+      variacion_id  INT REFERENCES variaciones(id),
+      url           TEXT NOT NULL,
+      orden         SMALLINT DEFAULT 0,
+      es_principal  BOOLEAN DEFAULT FALSE
+    );
+
+    -- Índices de búsqueda/filtrado
+    CREATE INDEX IF NOT EXISTS idx_prod_atrib_producto ON producto_atributos(producto_id);
+    CREATE INDEX IF NOT EXISTS idx_prod_atrib_atributo ON producto_atributos(atributo_id);
+    CREATE INDEX IF NOT EXISTS idx_prod_modelos_modelo ON producto_modelos(modelo_id);
+    CREATE INDEX IF NOT EXISTS idx_mod_disp_marca      ON modelos_dispositivo(marca_id);
+    CREATE INDEX IF NOT EXISTS idx_valores_atributo    ON valores_atributo(atributo_id);
+  `);
+
+  // Extender tablas existentes con columnas de clasificación (idempotente)
+  await db.query(`
+    ALTER TABLE productos ADD COLUMN IF NOT EXISTS grupo_id        SMALLINT REFERENCES grupos(id);
+    ALTER TABLE productos ADD COLUMN IF NOT EXISTS subgrupo_id     INT REFERENCES subgrupos(id);
+    ALTER TABLE productos ADD COLUMN IF NOT EXISTS categoria_jer_id INT REFERENCES categorias_jerarquia(id);
+    ALTER TABLE productos ADD COLUMN IF NOT EXISTS subcategoria_jer_id INT REFERENCES subcategorias(id);
+    ALTER TABLE productos ADD COLUMN IF NOT EXISTS marca_prod_id   SMALLINT REFERENCES marcas_prod(id);
+    ALTER TABLE variaciones ADD COLUMN IF NOT EXISTS color_id      SMALLINT REFERENCES colores(id);
+    ALTER TABLE variaciones ADD COLUMN IF NOT EXISTS dimension_id  INT REFERENCES dimensiones(id);
+  `);
 }
 
 // ─── Categorías ──────────────────────────────────────────────────────────────
@@ -644,4 +803,143 @@ export async function adjustStock(productId, variationId, delta) {
 export async function nextPedidoId() {
   const { rows: [{ nextval }] } = await getPool().query(`SELECT nextval('pedidos_id_seq')`);
   return Number(nextval);
+}
+
+// ─── Parámetros de clasificación ─────────────────────────────────────────────
+
+export async function getEstructuraCompleta() {
+  const db = getPool();
+  const [grupos, subgrupos, categorias, subcategorias, grupos_param, atributos, marcas_prod, colores, marcas_disp, lineas, modelos] = await Promise.all([
+    db.query(`SELECT * FROM grupos WHERE activo ORDER BY id`),
+    db.query(`SELECT * FROM subgrupos WHERE activo ORDER BY grupo_id, numero`),
+    db.query(`SELECT * FROM categorias_jerarquia WHERE activo ORDER BY subgrupo_id, numero`),
+    db.query(`SELECT * FROM subcategorias WHERE activo ORDER BY categoria_id, numero`),
+    db.query(`SELECT * FROM grupos_param ORDER BY id`),
+    db.query(`SELECT a.*, json_agg(v ORDER BY v.codigo) FILTER (WHERE v.id IS NOT NULL) AS valores
+              FROM atributos a LEFT JOIN valores_atributo v ON v.atributo_id = a.id
+              WHERE a.activo GROUP BY a.id ORDER BY a.grupo_param_id, a.id`),
+    db.query(`SELECT * FROM marcas_prod WHERE activo ORDER BY nombre`),
+    db.query(`SELECT * FROM colores WHERE activo ORDER BY id`),
+    db.query(`SELECT * FROM marcas_dispositivo ORDER BY nombre`),
+    db.query(`SELECT * FROM lineas_dispositivo ORDER BY marca_id, nombre`),
+    db.query(`SELECT m.*, md.nombre AS marca_nombre, l.nombre AS linea_nombre
+              FROM modelos_dispositivo m
+              JOIN marcas_dispositivo md ON md.id = m.marca_id
+              LEFT JOIN lineas_dispositivo l ON l.id = m.linea_id
+              WHERE m.activo ORDER BY md.nombre, l.nombre NULLS FIRST, m.nombre`),
+  ]);
+  return {
+    grupos: grupos.rows, subgrupos: subgrupos.rows,
+    categorias: categorias.rows, subcategorias: subcategorias.rows,
+    grupos_param: grupos_param.rows, atributos: atributos.rows,
+    marcas_prod: marcas_prod.rows, colores: colores.rows,
+    marcas_dispositivo: marcas_disp.rows, lineas_dispositivo: lineas.rows,
+    modelos_dispositivo: modelos.rows,
+  };
+}
+
+// ─── CRUD de artículos con clasificación ──────────────────────────────────────
+
+export async function listArticulos({ q = "", grupo_id, page = 1, limit = 50 } = {}) {
+  const db = getPool();
+  const offset = (page - 1) * limit;
+  const conds = ["p.activo = TRUE"];
+  const vals = [];
+  if (q) { vals.push(`%${q}%`); conds.push(`(p.nombre ILIKE $${vals.length} OR p.sku ILIKE $${vals.length})`); }
+  if (grupo_id) { vals.push(grupo_id); conds.push(`p.grupo_id = $${vals.length}`); }
+  const where = conds.join(" AND ");
+  vals.push(limit, offset);
+  const { rows } = await db.query(
+    `SELECT p.id, p.sku, p.nombre, p.precio, p.precio_regular, p.stock,
+            g.nombre AS grupo, sg.nombre AS subgrupo, mp.nombre AS marca,
+            p.grupo_id, p.subgrupo_id, p.categoria_jer_id, p.subcategoria_jer_id
+     FROM productos p
+     LEFT JOIN grupos g ON g.id = p.grupo_id
+     LEFT JOIN subgrupos sg ON sg.id = p.subgrupo_id
+     LEFT JOIN marcas_prod mp ON mp.id = p.marca_prod_id
+     WHERE ${where} ORDER BY p.actualizado_en DESC LIMIT $${vals.length - 1} OFFSET $${vals.length}`,
+    vals
+  );
+  return rows;
+}
+
+export async function getArticuloDetalle(id) {
+  const db = getPool();
+  const [pRes, atrsRes, modsRes] = await Promise.all([
+    db.query(`SELECT p.*, g.nombre AS grupo_nombre, sg.nombre AS subgrupo_nombre,
+                     cj.nombre AS categoria_nombre, sc.nombre AS subcategoria_nombre,
+                     mp.nombre AS marca_nombre
+              FROM productos p
+              LEFT JOIN grupos g ON g.id = p.grupo_id
+              LEFT JOIN subgrupos sg ON sg.id = p.subgrupo_id
+              LEFT JOIN categorias_jerarquia cj ON cj.id = p.categoria_jer_id
+              LEFT JOIN subcategorias sc ON sc.id = p.subcategoria_jer_id
+              LEFT JOIN marcas_prod mp ON mp.id = p.marca_prod_id
+              WHERE p.id = $1`, [id]),
+    db.query(`SELECT pa.*, a.nombre AS atributo_nombre, va.valor AS valor_nombre
+              FROM producto_atributos pa
+              JOIN atributos a ON a.id = pa.atributo_id
+              LEFT JOIN valores_atributo va ON va.id = pa.valor_id
+              WHERE pa.producto_id = $1`, [id]),
+    db.query(`SELECT pm.modelo_id, m.cod_modelo, m.nombre AS modelo_nombre,
+                     md.nombre AS marca_nombre
+              FROM producto_modelos pm
+              JOIN modelos_dispositivo m ON m.id = pm.modelo_id
+              JOIN marcas_dispositivo md ON md.id = m.marca_id
+              WHERE pm.producto_id = $1`, [id]),
+  ]);
+  if (!pRes.rows[0]) return null;
+  return { ...pRes.rows[0], atributos: atrsRes.rows, modelos: modsRes.rows };
+}
+
+export async function crearArticulo({ nombre, sku = "", descripcion = "", grupo_id, subgrupo_id, categoria_jer_id, subcategoria_jer_id, marca_prod_id, precio, precio_regular, stock = 0 }) {
+  const db = getPool();
+  const { rows: [p] } = await db.query(
+    `INSERT INTO productos (nombre, sku, descripcion, grupo_id, subgrupo_id, categoria_jer_id, subcategoria_jer_id, marca_prod_id, precio, precio_regular, stock, stock_status, actualizado_en)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,CASE WHEN $11>0 THEN 'instock' ELSE 'outofstock' END,NOW())
+     RETURNING id`,
+    [nombre, sku, descripcion, grupo_id || null, subgrupo_id || null, categoria_jer_id || null, subcategoria_jer_id || null, marca_prod_id || null, precio || 0, precio_regular || 0, stock]
+  );
+  return p;
+}
+
+export async function actualizarArticulo(id, datos) {
+  const db = getPool();
+  const campos = [];
+  const vals = [];
+  const set = (col, v) => { if (v !== undefined) { vals.push(v); campos.push(`${col}=$${vals.length}`); } };
+  set("nombre", datos.nombre);
+  set("sku", datos.sku);
+  set("descripcion", datos.descripcion);
+  set("grupo_id", datos.grupo_id ?? null);
+  set("subgrupo_id", datos.subgrupo_id ?? null);
+  set("categoria_jer_id", datos.categoria_jer_id ?? null);
+  set("subcategoria_jer_id", datos.subcategoria_jer_id ?? null);
+  set("marca_prod_id", datos.marca_prod_id ?? null);
+  set("precio", datos.precio);
+  set("precio_regular", datos.precio_regular);
+  set("stock", datos.stock);
+  if (!campos.length) return;
+  vals.push(id);
+  await db.query(`UPDATE productos SET ${campos.join(",")}, actualizado_en=NOW() WHERE id=$${vals.length}`, vals);
+}
+
+export async function setArticuloAtributos(producto_id, atributos) {
+  const db = getPool();
+  await db.query(`DELETE FROM producto_atributos WHERE producto_id=$1`, [producto_id]);
+  for (const { atributo_id, valor_id, valor_num, valor_texto } of atributos) {
+    if (!atributo_id) continue;
+    await db.query(
+      `INSERT INTO producto_atributos (producto_id, atributo_id, valor_id, valor_num, valor_texto) VALUES ($1,$2,$3,$4,$5) ON CONFLICT DO NOTHING`,
+      [producto_id, atributo_id, valor_id || null, valor_num || null, valor_texto || null]
+    );
+  }
+}
+
+export async function setArticuloModelos(producto_id, modelo_ids) {
+  const db = getPool();
+  await db.query(`DELETE FROM producto_modelos WHERE producto_id=$1`, [producto_id]);
+  for (const mid of (modelo_ids || [])) {
+    await db.query(`INSERT INTO producto_modelos (producto_id, modelo_id) VALUES ($1,$2) ON CONFLICT DO NOTHING`, [producto_id, mid]);
+  }
 }
