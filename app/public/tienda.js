@@ -393,46 +393,59 @@ function checkout() {
   const items = CART.map((i) => `<div class="t-co-item"><span>${i.qty}× ${esc(i.nombre)}${i.label ? " · " + esc(i.label) : ""}</span><b>${precio(i.precio * i.qty)}</b></div>`).join("");
   const provOpts = PROV_AR.map(([c, n]) => `<option value="${c}">${esc(n)}</option>`).join("");
   $("#t-modal-body").innerHTML = `<div class="t-co" style="grid-column:1/-1">
-    <h2>Finalizar compra</h2>
-    <div class="t-co-resumen">${items}<div class="t-co-total" id="t-co-totales">${totalesHTML()}</div></div>
+    <h2 class="t-co-titulo">Finalizar compra</h2>
     <form id="t-co-form" class="t-co-form">
-      ${STAFF ? `<div class="t-co-staff">
-        <strong>🧑‍💼 Vendedor: cargar a nombre de un cliente</strong>
-        <input id="t-co-cli" placeholder="Buscar por teléfono, email o nombre…" autocomplete="off">
-        <div id="t-co-cli-sug" class="t-co-cli-sug"></div>
-        <div id="t-co-cli-sel"></div>
-      </div>` : ""}
-      <label>Nombre y apellido<input name="nombre" required value="${esc(YO.nombre || "")}"></label>
-      <label>Email<input name="email" type="email" required value="${esc(YO.email || "")}" ${YO.autenticado ? "readonly" : ""}></label>
-      <label>Teléfono / WhatsApp<input name="telefono" inputmode="tel" placeholder="Ej: 381 555 1234"></label>
-      <div class="t-co-envio">
-        <label class="t-co-radio"><input type="radio" name="metodo" value="retiro" checked> Retiro en el local (gratis)</label>
-        <label class="t-co-radio"><input type="radio" name="metodo" value="local"> 🛵 Envío en Tucumán (cadete)</label>
-        <label class="t-co-radio"><input type="radio" name="metodo" value="envio"> 📦 Envío a domicilio (Andreani)</label>
-      </div>
-      <div id="t-co-dir" class="t-co-dir hidden">
-        <label>Dirección<input name="calle" placeholder="Calle y número"></label>
-        <div class="t-co-row">
-          <label>Localidad<input name="ciudad"></label>
-          <label>Provincia<select name="provincia">${provOpts}</select></label>
-          <label>CP<input name="cp" inputmode="numeric" placeholder="Ej: 4000"></label>
+      <div class="t-co-left">
+        ${STAFF ? `<div class="t-co-staff">
+          <strong>🧑‍💼 Vendedor: cargar a nombre de un cliente</strong>
+          <input id="t-co-cli" placeholder="Buscar por teléfono, email o nombre…" autocomplete="off">
+          <div id="t-co-cli-sug" class="t-co-cli-sug"></div>
+          <div id="t-co-cli-sel"></div>
+        </div>` : ""}
+        <div class="t-co-fields">
+          <label>Nombre y apellido<input name="nombre" required value="${esc(YO.nombre || "")}"></label>
+          <label>Email<input name="email" type="email" required value="${esc(YO.email || "")}" ${YO.autenticado ? "readonly" : ""}></label>
+          <label>Teléfono / WhatsApp<input name="telefono" inputmode="tel" placeholder="Ej: 381 555 1234"></label>
         </div>
-        <label>DNI (requerido para el envío por Andreani)<input name="dni" inputmode="numeric" placeholder="Sin puntos"></label>
-        <button type="button" class="t-co-calc" id="t-co-calc">Calcular envío</button>
-        <div id="t-co-rates" class="t-co-rates"></div>
+        <div class="t-co-section">
+          <div class="t-co-section-tit">Método de envío</div>
+          <div class="t-co-envio">
+            <label class="t-co-radio"><input type="radio" name="metodo" value="retiro" checked> Retiro en el local (gratis)</label>
+            <label class="t-co-radio"><input type="radio" name="metodo" value="local"> 🛵 Envío en Tucumán (cadete)</label>
+            <label class="t-co-radio"><input type="radio" name="metodo" value="envio"> 📦 Envío a domicilio (Andreani)</label>
+          </div>
+          <div id="t-co-dir" class="t-co-dir hidden">
+            <label>Dirección<input name="calle" placeholder="Calle y número"></label>
+            <div class="t-co-row">
+              <label>Localidad<input name="ciudad"></label>
+              <label>Provincia<select name="provincia">${provOpts}</select></label>
+              <label>CP<input name="cp" inputmode="numeric" placeholder="Ej: 4000"></label>
+            </div>
+            <label>DNI (requerido para Andreani)<input name="dni" inputmode="numeric" placeholder="Sin puntos"></label>
+            <button type="button" class="t-co-calc" id="t-co-calc">Calcular envío</button>
+            <div id="t-co-rates" class="t-co-rates"></div>
+          </div>
+        </div>
+        <label>Notas (opcional)<textarea name="notas" rows="2" placeholder="Aclaraciones para tu pedido"></textarea></label>
+        <div class="t-co-cupon"><input id="t-cupon-code" placeholder="🎟️ Código de descuento" autocomplete="off"><button type="button" class="t-co-calc" id="t-cupon-btn">Aplicar</button></div>
+        <div id="t-cupon-msg" class="t-cart-nota" style="text-align:left"></div>
       </div>
-      <label>Notas (opcional)<textarea name="notas" rows="2" placeholder="Aclaraciones para tu pedido"></textarea></label>
-      <div class="t-co-cupon"><input id="t-cupon-code" placeholder="🎟️ Código de descuento" autocomplete="off"><button type="button" class="t-co-calc" id="t-cupon-btn">Aplicar</button></div>
-      <div id="t-cupon-msg" class="t-cart-nota" style="text-align:left"></div>
-      <div class="t-co-pago">
-        <div class="t-co-pago-tit">Medio de pago</div>
-        <label class="t-co-radio"><input type="radio" name="pago" value="transferencia" checked> 🏦 Transferencia bancaria</label>
-        <label class="t-co-radio"><input type="radio" name="pago" value="efectivo"> 💵 Efectivo (retiro)</label>
-        <label class="t-co-radio"><input type="radio" name="pago" value="mp"> 💳 Mercado Pago / tarjeta${RECARGO ? ` <small>(+${RECARGO}%)</small>` : ""}</label>
-        ${NAVE_ON ? `<label class="t-co-radio"><input type="radio" name="pago" value="nave"> 🟠 Nave (Naranja X) / tarjeta${RECARGO ? ` <small>(+${RECARGO}%)</small>` : ""}</label>` : ""}
+      <div class="t-co-right">
+        <div class="t-co-resumen">
+          <div class="t-co-resumen-tit">Tu pedido</div>
+          ${items}
+          <div id="t-co-totales">${totalesHTML()}</div>
+        </div>
+        <div class="t-co-pago">
+          <div class="t-co-pago-tit">Medio de pago</div>
+          <label class="t-co-radio"><input type="radio" name="pago" value="transferencia" checked> 🏦 Transferencia bancaria</label>
+          <label class="t-co-radio"><input type="radio" name="pago" value="efectivo"> 💵 Efectivo (retiro)</label>
+          <label class="t-co-radio"><input type="radio" name="pago" value="mp"> 💳 Mercado Pago / tarjeta${RECARGO ? ` <small>(+${RECARGO}%)</small>` : ""}</label>
+          ${NAVE_ON ? `<label class="t-co-radio"><input type="radio" name="pago" value="nave"> 🟠 Nave (Naranja X) / tarjeta${RECARGO ? ` <small>(+${RECARGO}%)</small>` : ""}</label>` : ""}
+        </div>
+        <p class="t-cart-nota" style="text-align:left" id="t-co-nota">Coordinás el <strong>pago por transferencia</strong>. Te pasamos los datos al confirmar.</p>
+        <button type="submit" class="t-btn-grande" id="t-co-pagar">Confirmar pedido →</button>
       </div>
-      <p class="t-cart-nota" style="text-align:left" id="t-co-nota">Coordinás el <strong>pago por transferencia</strong>. Te pasamos los datos al confirmar.</p>
-      <button type="submit" class="t-btn-grande" id="t-co-pagar">Confirmar pedido →</button>
     </form>
   </div>`;
   $("#t-cart").classList.add("hidden");
