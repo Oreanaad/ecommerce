@@ -720,7 +720,11 @@ const server = createServer(async (req, res) => {
       if (it.variationId && Array.isArray(p.variaciones)) {
         const v = p.variaciones.find((x) => x.id === Number(it.variationId));
         if (v && (v.stock_status !== "instock" || v.stock === 0)) return send(res, 400, { error: `"${p.nombre}" (esa medida) se quedó sin stock. Elegí otra o quitalo del carrito.` });
-      } else if (p.stock_status !== "instock" || p.stock === 0) return send(res, 400, { error: `"${p.nombre}" se quedó sin stock. Quitalo del carrito para continuar.` });
+        if (v && v.stock != null && Number(it.qty) > v.stock) return send(res, 400, { error: `"${p.nombre}": pedís ${it.qty} pero solo hay ${v.stock} disponible.` });
+      } else {
+        if (p.stock_status !== "instock" || p.stock === 0) return send(res, 400, { error: `"${p.nombre}" se quedó sin stock. Quitalo del carrito para continuar.` });
+        if (p.stock != null && Number(it.qty) > p.stock) return send(res, 400, { error: `"${p.nombre}": pedís ${it.qty} pero solo hay ${p.stock} disponible.` });
+      }
     }
 
     await AUTH.asegurarCliente(email, nombre);
@@ -2572,6 +2576,7 @@ Importes en POSITIVO y solo numéricos (sin $ ni separadores de miles). "total" 
             }
             const k = pid + ":" + (vid || ""), falta = qty - (yaPorItem.get(k) || 0);
             if (falta <= 0) continue;
+            await ajustarStockDB(pid, vid, -falta); // descuenta stock de la DB al completar
             if (plan[k]) {
               const aa = ubic.asignaciones.find((x) => x.productId === pid && (x.variationId || null) === vid && x.slotId === plan[k]);
               if (aa) aa.cantidad = Math.max(0, (Number(aa.cantidad) || 0) - falta); else ubic.asignaciones.push({ productId: pid, variationId: vid, slotId: plan[k], nota: "", cantidad: 0 });
@@ -2599,7 +2604,7 @@ Importes en POSITIVO y solo numéricos (sin $ ni separadores de miles). "total" 
             restaurado = desc.map((d) => ({ ...d }));
             const ubic = await readJson(UBIC_PATH, { asignaciones: [] });
             if (restaurarUbic(ubic, desc)) await writeFile(UBIC_PATH, JSON.stringify(ubic, null, 2));
-            for (const d of desc) if (d.combo) await ajustarStockDB(d.productId, d.variationId || null, Number(d.cant) || 0).catch(() => {});
+            for (const d of desc) await ajustarStockDB(d.productId, d.variationId || null, Number(d.cant) || 0).catch(() => {}); // restaura stock (combos y simples)
             delete dp.ubicDesc[String(id)];
             if (dp.comboPick) delete dp.comboPick[String(id)];
             await writeFile(PEDIDOS_PATH, JSON.stringify(dp, null, 2));
