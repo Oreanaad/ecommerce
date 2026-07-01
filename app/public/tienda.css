@@ -98,7 +98,7 @@ a { color: inherit; text-decoration: none; }
 .t-hero p { font-size: 16px; color: rgba(255,255,255,.8); line-height: 1.6; max-width: 520px; margin: 0 auto; }
 .t-hero p strong { color: #fff; }
 
-main { max-width: 1200px; margin: 0 auto; padding: 28px 24px 60px; }
+main { max-width: 1200px; margin: 0 auto; padding: 48px 24px 88px; }
 
 /* CATEGORIAS */
 .t-cats { display: flex; gap: 9px; overflow-x: auto; padding: 4px 0 18px; scrollbar-width: thin; }
@@ -286,7 +286,7 @@ button, a, label, .t-cat, .t-subcat, .t-card, .t-cm-hija { -webkit-tap-highlight
   .t-toast { bottom: calc(20px + env(safe-area-inset-bottom)); max-width: 90vw; }
   .t-nav { padding-left: max(14px, env(safe-area-inset-left)); padding-right: max(14px, env(safe-area-inset-right)); }
   .t-modal-close { top: calc(14px + env(safe-area-inset-top)); }
-  main { padding: 22px 16px 48px; }
+  main { padding: 32px 16px 72px; }
   .t-detalle-info { padding-bottom: 44px; }
   /* Botones de cantidad más cómodos para el dedo */
   .ci-qty button { width: 32px; height: 32px; }
