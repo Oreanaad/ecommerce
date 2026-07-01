@@ -350,14 +350,17 @@ function checkout() {
   if (!CART.length) return;
 
   // Verificar stock antes de mostrar el formulario
-  const sinStock = CART.filter(i => {
+  const sinStock = CART.flatMap(i => {
     const prod = PRODS.find(p => p.id === i.id);
-    if (!prod) return false; // producto cargado fuera del catálogo, no bloquear
+    if (!prod) return [];
     const obj = i.variationId ? (prod.variaciones || []).find(v => v.id === i.variationId) : prod;
-    return obj && !hayStock(obj);
+    if (!obj) return [];
+    if (!hayStock(obj)) return [{ ...i, motivo: "sin stock" }];
+    if (obj.stock != null && i.qty > obj.stock) return [{ ...i, motivo: `pedís ${i.qty}, hay ${obj.stock}` }];
+    return [];
   });
   if (sinStock.length) {
-    const lista = sinStock.map(i => `<li>${esc(i.nombre)}${i.label ? ` · ${esc(i.label)}` : ""}</li>`).join("");
+    const lista = sinStock.map(i => `<li>${esc(i.nombre)}${i.label ? ` · ${esc(i.label)}` : ""} <span style="color:#888;font-size:12px">(${esc(i.motivo)})</span></li>`).join("");
     $("#t-modal-body").innerHTML = `<div class="t-co" style="grid-column:1/-1">
       <h2>⚠️ Productos sin stock</h2>
       <p style="color:var(--text-mid);margin-bottom:16px">Estos artículos ya no tienen stock disponible:</p>
