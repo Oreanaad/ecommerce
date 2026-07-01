@@ -288,28 +288,35 @@ let VC_OPEN = false;
 function verCarritoModal() {
   if (!CART.length) return;
   const total = CART.reduce((s, i) => s + i.precio * i.qty, 0);
+  const PH_SVG = `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>`;
   const filas = CART.map((i) => `
     <div class="t-vc-item">
-      ${i.imagen ? `<img class="t-vc-img" src="${esc(i.imagen)}" data-src="${esc(i.imagen)}" alt="" onerror="imgRetry(this)">` : `<div class="t-vc-img ph">🦷</div>`}
+      ${i.imagen ? `<img class="t-vc-img" src="${esc(i.imagen)}" data-src="${esc(i.imagen)}" alt="" onerror="imgRetry(this)">` : `<div class="t-vc-img ph">${PH_SVG}</div>`}
       <div class="t-vc-info">
-        <div class="t-vc-n">${esc(i.nombre)}</div>
-        ${i.label ? `<div class="t-vc-var">${esc(i.label)}</div>` : ""}
-        <div class="t-vc-pu">${precio(i.precio)} c/u</div>
+        <div class="t-vc-n">${esc(i.nombre)}${i.label ? ` <span class="t-vc-var">· ${esc(i.label)}</span>` : ""}</div>
+        ${i.precio > 0 ? `<div class="t-vc-pu">${precio(i.precio)} c/u</div>` : ""}
         <div class="t-vc-controls">
           <div class="ci-qty"><button data-cq="${i.key}|-1">−</button><span>${i.qty}</span><button data-cq="${i.key}|1">+</button></div>
           <button class="ci-del" data-cdel="${i.key}">Quitar</button>
         </div>
       </div>
-      <div class="t-vc-sub">${precio(i.precio * i.qty)}</div>
+      <div class="t-vc-right">
+        <div class="t-vc-sub">${i.precio > 0 ? precio(i.precio * i.qty) : "—"}</div>
+      </div>
     </div>`).join("");
+  const n = CART.reduce((s, i) => s + i.qty, 0);
   $("#t-modal-body").innerHTML = `<div class="t-vc">
-    <img class="t-vc-logo" src="/assets/logo.png" alt="Punto Damia">
-    <h2>Tu pedido</h2>
-    <p class="t-vc-intro">Revisá que esté todo lo que pediste — cantidades y precios — antes de confirmar.</p>
+    <div class="t-vc-header">
+      <img class="t-vc-logo" src="/assets/logo.png" alt="Punto Damia">
+      <h2>Tu pedido</h2>
+      <p class="t-vc-intro">${n} ${n === 1 ? "artículo" : "artículos"} · revisá cantidades antes de confirmar</p>
+    </div>
     <div class="t-vc-list">${filas}</div>
-    <div class="t-vc-total"><span>Total</span><strong>${precio(total)}</strong></div>
-    <button class="t-btn-grande" id="t-vc-checkout">Finalizar compra</button>
-    <p class="t-cart-nota">Pago seguro y envío por Andreani.</p>
+    <div class="t-vc-footer">
+      <div class="t-vc-total"><span>Total</span><strong>${precio(total)}</strong></div>
+      <button class="t-btn-grande" id="t-vc-checkout">Finalizar compra →</button>
+      <p class="t-cart-nota" style="margin-top:10px">🔒 Pago seguro · Envío por Andreani</p>
+    </div>
   </div>`;
   VC_OPEN = true;
   $("#t-cart").classList.add("hidden");
