@@ -319,7 +319,28 @@ export async function initDb() {
     ALTER TABLE productos ADD COLUMN IF NOT EXISTS marca_prod_id   SMALLINT REFERENCES marcas_prod(id);
     ALTER TABLE variaciones ADD COLUMN IF NOT EXISTS color_id      SMALLINT REFERENCES colores(id);
     ALTER TABLE variaciones ADD COLUMN IF NOT EXISTS dimension_id  INT REFERENCES dimensiones(id);
+    ALTER TABLE grupos ADD COLUMN IF NOT EXISTS imagen_mime TEXT;
+    ALTER TABLE grupos ADD COLUMN IF NOT EXISTS imagen_data TEXT;
   `);
+}
+
+// ─── Imágenes de grupos (categorías padre) ───────────────────────────────────
+
+export async function setGrupoImagen(id, mime, base64) {
+  const db = getPool();
+  await db.query(
+    `UPDATE grupos SET imagen_mime = $1, imagen_data = $2 WHERE id = $3`,
+    [mime, base64, id]
+  );
+}
+
+export async function getGrupoImagen(id) {
+  const db = getPool();
+  const { rows } = await db.query(
+    `SELECT imagen_mime, imagen_data FROM grupos WHERE id = $1`,
+    [id]
+  );
+  return rows[0] || null;
 }
 
 // ─── Categorías ──────────────────────────────────────────────────────────────

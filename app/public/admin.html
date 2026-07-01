@@ -61,6 +61,7 @@
           <button class="tab" data-tab="redes">📸 Redes</button>
           <button class="tab" data-tab="campanas">📣 Campañas</button>
           <button class="tab" data-tab="ml">🛒 MercadoLibre</button>
+          <button class="tab" data-tab="catfotos">🫧 Fotos categorías</button>
         </div>
       </div>
       <button class="tab" data-tab="ajustes">⚙️ Ajustes</button>
@@ -553,6 +554,13 @@
       <div id="rd-canvas-wrap" class="rd-canvas-wrap"></div>
     </section>
 
+    <!-- FOTOS DE CATEGORÍAS -->
+    <section id="tab-catfotos" class="panel">
+      <h3>🫧 Fotos de categorías</h3>
+      <p class="meta">Subí una foto circular para cada categoría. Se muestra como burbuja arriba del catálogo en la tienda.</p>
+      <div id="catfotos-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:20px;margin-top:20px"></div>
+    </section>
+
     <!-- CUPONES -->
     <section id="tab-promos" class="panel">
       <div class="solic-nueva">
@@ -593,6 +601,6 @@
 
   <div id="toast" class="toast hidden"></div>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-  <script src="/app.js?v=178"></script>
+  <script src="/app.js?v=181"></script>
 </body>
 </html>

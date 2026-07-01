@@ -18,6 +18,7 @@ import {
   getCupones, getCupon, crearCupon, borrarCupon, incrementarUsoCupon,
   getEstructuraCompleta, listArticulos, getArticuloDetalle,
   crearArticulo, actualizarArticulo, setArticuloAtributos, setArticuloModelos,
+  setGrupoImagen, getGrupoImagen,
 } from "./db.mjs";
 import { crearAuth } from "./auth.mjs";
 import { crearML } from "./ml.mjs";
@@ -1407,6 +1408,18 @@ const server = createServer(async (req, res) => {
       return send(res, 200, { categorias: await getCategoriasJerarquia() });
     } catch { return send(res, 200, { categorias: [] }); }
   }
+
+  if (u.pathname === "/api/admin/cats/imagen" && req.method === "POST") {
+    if (!(await esStaff(req))) return send(res, 401, { error: "No autorizado" });
+    const b = await readBody(req);
+    if (!b.id || !b.data) return send(res, 400, { error: "Faltan datos" });
+    const id = parseInt(b.id, 10);
+    if (isNaN(id)) return send(res, 400, { error: "ID inválido" });
+    const match = b.data.match(/^data:(image\/(?:jpeg|png|webp));base64,(.+)$/);
+    if (!match) return send(res, 400, { error: "Formato de imagen inválido" });
+    await setGrupoImagen(id, match[1], match[2]);
+    return send(res, 200, { ok: true });
+  }
   // ---- Alta de producto nuevo en la DB ----
   if (u.pathname === "/api/admin/producto-nuevo" && req.method === "POST") {
     if (!(await esStaff(req))) return send(res, 401, { error: "No autorizado" });
@@ -2644,7 +2657,7 @@ Importes en POSITIVO y solo numéricos (sin $ ni separadores de miles). "total" 
     if (!email) return send(res, 200, { pedidos: [] });
     try {
       const todos = await getPedidos({ email: email.toLowerCase(), limit: 20 });
-      const pedidos = todos.map((p) => ({ id: p.id, number: p.id, status: p.status, date_created: p.fecha_creado, total: p.total, line_items: (p.items || []).map((li) => ({ name: li.nombre, quantity: li.cantidad })) }));
+      const pedidos = todos.map((p) => ({ id: p.id, number: p.id, status: p.status, date_created: p.fecha_creado, total: p.total, shipping_total: p.shipping_total, line_items: (p.items || []).map((li) => ({ name: li.nombre, quantity: li.cantidad, subtotal: li.subtotal })) }));
       return send(res, 200, { email, pedidos });
     } catch { return send(res, 200, { pedidos: [] }); }
   }
@@ -2686,6 +2699,21 @@ Importes en POSITIVO y solo numéricos (sin $ ni separadores de miles). "total" 
       res.writeHead(200, { "Content-Type": ct, "Cache-Control": "public, max-age=31536000" });
       return res.end(b);
     } catch { return send(res, 404, "", "text/plain"); }
+  }
+
+  if (u.pathname.startsWith("/cat-img/")) {
+    const id = parseInt(u.pathname.slice(9), 10);
+    if (!isNaN(id)) {
+      try {
+        const row = await getGrupoImagen(id);
+        if (row && row.imagen_data) {
+          const buf = Buffer.from(row.imagen_data, "base64");
+          res.writeHead(200, { "Content-Type": row.imagen_mime, "Cache-Control": "public, max-age=86400" });
+          return res.end(buf);
+        }
+      } catch {}
+    }
+    return send(res, 404, "", "text/plain");
   }
   // ---- SEO: robots.txt (solo indexa en el dominio real, el de test queda fuera de Google) ----
   if (u.pathname === "/robots.txt") {
@@ -2792,7 +2820,7 @@ ${(f.items && f.items.length ? f.items : [{ nombre: f.cliente ? "Venta" : "Produ
     }
     // Listado / categoría
     const catParam = u.searchParams.get("cat");
-    const title = catParam ? `${catParam} · Tienda · El Pasaje Dental` : "Tienda · El Pasaje Dental · Insumos Odontológicos Tucumán";
+    const title = catParam ? `${catParam} · Tienda · Punto Damia` : "Tienda · Punto Damia · Accesorios y Tecnología Tucumán";
     const canonical = `https://${host}/tienda${catParam ? "?cat=" + encodeURIComponent(catParam) : ""}`;
     return htmlPageSEO(res, "tienda.html", { host, title, canonical, jsonld: [negocioLD(host)] });
   }

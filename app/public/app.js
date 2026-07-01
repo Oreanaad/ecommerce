@@ -797,7 +797,7 @@ function activarTab(name, fromHash) {
   // resaltar el grupo del menú al que pertenece y cerrar desplegables
   $$(".tabgroup").forEach((g) => { g.classList.toggle("active-group", !!g.querySelector(".tab.active")); g.classList.remove("open"); });
   if (!fromHash && location.hash !== "#" + name) location.hash = name; // URL propia por opción
-  const loaders = { carga: initCarga, piedras: renderPiedras, transferir: renderTransferir, mapa: renderMapa, pedidos: cargarPedidos, ml: cargarML, clientes: cargarClientes, ajustes: cargarAjustes, stats: cargarEstadisticas, finanzas: cargarFinanzas, vencimientos: cargarVencimientos, reparto: cargarReparto, campanas: cargarCampanas, venta: cargarVenta, foto: cargarRecibir, solicitudes: cargarSolicitudes, encargos: cargarEncargos, redes: cargarRedes, promos: cargarPromos, inventario: cargarInventario, articulos: cargarArticulos, renombrar: cargarRenombrar };
+  const loaders = { carga: initCarga, piedras: renderPiedras, transferir: renderTransferir, mapa: renderMapa, pedidos: cargarPedidos, ml: cargarML, clientes: cargarClientes, ajustes: cargarAjustes, stats: cargarEstadisticas, finanzas: cargarFinanzas, vencimientos: cargarVencimientos, reparto: cargarReparto, campanas: cargarCampanas, venta: cargarVenta, foto: cargarRecibir, solicitudes: cargarSolicitudes, encargos: cargarEncargos, redes: cargarRedes, promos: cargarPromos, inventario: cargarInventario, articulos: cargarArticulos, renombrar: cargarRenombrar, catfotos: cargarCatfotos };
   if (loaders[name]) loaders[name]();
 }
 $$(".tab").forEach((t) => t.onclick = () => activarTab(t.dataset.tab));
@@ -4931,3 +4931,40 @@ function renRenderPager() {
   if ($('#ren-prev')) $('#ren-prev').onclick = () => { REN_PAGE--; renCargarPagina(); };
   if ($('#ren-next')) $('#ren-next').onclick = () => { REN_PAGE++; renCargarPagina(); };
 }
+
+// ---- Fotos de categorías ----
+async function cargarCatfotos() {
+  const grid = $('#catfotos-grid'); if (!grid) return;
+  grid.innerHTML = '<span class="meta">Cargando…</span>';
+  const { categorias } = await fetch('/api/tienda/categorias').then(r => r.json());
+  if (!categorias || !categorias.length) { grid.innerHTML = '<span class="meta">No hay categorías.</span>'; return; }
+  grid.innerHTML = categorias.map(cat => `
+    <div style="display:flex;flex-direction:column;align-items:center;gap:10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:16px;padding:18px 12px">
+      <div id="cf-img-${cat.id}" style="width:80px;height:80px;border-radius:50%;overflow:hidden;background:#E8F7FD;display:flex;align-items:center;justify-content:center;border:2px solid #D0E8F5">
+        <img src="/cat-img/${cat.id}?t=${Date.now()}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" alt="">
+        <span style="display:none;align-items:center;justify-content:center;width:100%;height:100%;font-size:28px;font-weight:800;color:#0088C8">${cat.name[0].toUpperCase()}</span>
+      </div>
+      <strong style="font-size:13px;text-align:center;color:#003A5A">${cat.name}</strong>
+      <label style="cursor:pointer;background:#00AEEF;color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;display:inline-block">
+        📷 Cambiar foto
+        <input type="file" accept="image/*" style="display:none" onchange="subirFotoCat(${cat.id}, this)">
+      </label>
+      <span id="cf-msg-${cat.id}" style="font-size:11px;color:#16a34a;min-height:14px"></span>
+    </div>
+  `).join('');
+}
+window.subirFotoCat = async (id, input) => {
+  const msg = $(`#cf-msg-${id}`);
+  if (!input.files[0]) return;
+  msg.textContent = 'Subiendo…'; msg.style.color = '#0088C8';
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    const r = await api('/api/admin/cats/imagen', { id, data: e.target.result });
+    if (r.ok) {
+      msg.textContent = '✓ Guardado'; msg.style.color = '#16a34a';
+      const img = $(`#cf-img-${id} img`);
+      if (img) { img.style.display = ''; img.nextElementSibling.style.display = 'none'; img.src = `/cat-img/${id}?t=${Date.now()}`; }
+    } else { msg.textContent = r.error || 'Error'; msg.style.color = '#e0245e'; }
+  };
+  reader.readAsDataURL(input.files[0]);
+};

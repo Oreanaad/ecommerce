@@ -108,9 +108,16 @@ function PROD_BY_ID_T(id) { return PRODS.find((x) => x.id === id); }
 function ocultarSug() { const d = $("#t-sug"); if (d) d.classList.add("hidden"); }
 
 function renderCats() {
-  const padres = ARBOL.length ? ARBOL : CATS.slice(0, 16).map((n) => ({ name: n, hijas: [] }));
-  $("#t-cats").innerHTML = `<button class="t-cat ${catPadre ? "" : "active"}" data-cat-padre="">Todo</button>` +
-    padres.map((p) => `<button class="t-cat ${catPadre === p.name ? "active" : ""}" data-cat-padre="${esc(p.name)}">${esc(p.name)}</button>`).join("");
+  const padres = ARBOL.length ? ARBOL : CATS.slice(0, 16).map((n, i) => ({ id: i, name: n, hijas: [] }));
+  const todos = [{ id: null, name: "Todo" }, ...padres];
+  $("#t-cats").innerHTML = todos.map((cat) => {
+    const active = cat.id === null ? !catPadre : catPadre === cat.name;
+    const initial = cat.name[0].toUpperCase();
+    const imgInner = cat.id !== null
+      ? `<img src="/cat-img/${cat.id}" alt="" onerror="this.style.display='none';this.nextSibling.style.display='flex'"><span class="t-bubble-ph" style="display:none">${initial}</span>`
+      : `<span class="t-bubble-ph">✦</span>`;
+    return `<button class="t-cat-col${active ? " active" : ""}" data-cat-padre="${cat.id !== null ? esc(cat.name) : ""}"><div class="t-bubble-img">${imgInner}</div><span class="t-cat-lbl">${esc(cat.name)}</span></button>`;
+  }).join("");
   const pSel = padres.find((p) => p.name === catPadre);
   const sub = $("#t-subcats");
   sub.innerHTML = (pSel && pSel.hijas && pSel.hijas.length)

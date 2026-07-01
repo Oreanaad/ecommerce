@@ -28,9 +28,23 @@
     button:hover{background:#0088C8}
     .salir{background:#fff;color:#0088C8;border:1.5px solid #B3E5FC}
     .salir:hover{background:#E8F7FD}
-    .ped{border:1px solid #D0E8F5;border-radius:12px;padding:14px;margin-bottom:10px;background:#fff}
-    .ped-top{display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px;color:#5A7A90}
-    .ped-total{font-weight:800;font-size:16px;color:#0088C8}
+    .ped{border:1px solid #D0E8F5;border-radius:12px;margin-bottom:10px;background:#fff;overflow:hidden}
+    .ped-head{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;cursor:pointer;user-select:none;gap:12px}
+    .ped-head:hover{background:#f0f9ff}
+    .ped-meta{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+    .ped-num{font-weight:700;font-size:14px;color:#003A5A}
+    .ped-date{font-size:13px;color:#5A7A90}
+    .ped-right{display:flex;align-items:center;gap:10px;flex-shrink:0}
+    .ped-total{font-weight:800;font-size:15px;color:#0088C8}
+    .ped-arrow{font-size:12px;color:#5A7A90;transition:transform .2s}
+    .ped.open .ped-arrow{transform:rotate(180deg)}
+    .ped-detail{display:none;padding:0 16px 14px;border-top:1px solid #E8F7FD}
+    .ped.open .ped-detail{display:block}
+    .ped-item{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid #f1f5f9;font-size:13.5px;gap:8px}
+    .ped-item:last-child{border:none}
+    .ped-item-name{flex:1;color:#0D1B2A}
+    .ped-item-qty{color:#5A7A90;font-size:12px;flex-shrink:0}
+    .ped-item-price{font-weight:700;color:#0088C8;flex-shrink:0}
     .est{font-size:11px;padding:2px 9px;border-radius:100px;background:#E8F7FD;color:#0088C8;border:1px solid #B3E5FC;font-weight:600}
     .vacio{color:#5A7A90;font-size:14px;text-align:center;padding:18px}
     .msg{font-size:13px;margin-top:8px}.msg.ok{color:#16a34a}.msg.err{color:#e0245e}
@@ -89,8 +103,16 @@
       $("#d-rol").textContent = rolNom[yo.rol]||yo.rol;
       const pd = await (await fetch("/api/cuenta/pedidos")).json();
       const cont = $("#pedidos");
+      const estadoLabel = { pending:"Pendiente", processing:"En proceso", completed:"Completado", cancelled:"Cancelado", "on-hold":"En espera", refunded:"Reembolsado" };
       if(!pd.pedidos || !pd.pedidos.length){ cont.innerHTML='<div class="vacio">Todavía no tenés pedidos.</div>'; }
-      else cont.innerHTML = pd.pedidos.map(p=>`<div class="ped"><div class="ped-top"><span>#${p.number||p.id} · ${(p.date_created||"").slice(0,10)}</span><span class="est">${p.status}</span></div><div class="ped-total">${precio(p.total)}</div></div>`).join("");
+      else {
+        cont.innerHTML = pd.pedidos.map((p,i)=>{
+          const items = (p.line_items||[]).map(li=>`<div class="ped-item"><span class="ped-item-name">${li.name}</span><span class="ped-item-qty">×${li.quantity}</span><span class="ped-item-price">${li.subtotal ? precio(li.subtotal) : ""}</span></div>`).join("");
+          const fecha = (p.date_created||"").slice(0,10).split("-").reverse().join("/");
+          return `<div class="ped" id="ped-${i}"><div class="ped-head" onclick="togglePed(${i})"><div class="ped-meta"><span class="ped-num">#${p.number||p.id}</span><span class="ped-date">${fecha}</span><span class="est">${estadoLabel[p.status]||p.status}</span></div><div class="ped-right"><span class="ped-total">${precio(p.total)}</span><span class="ped-arrow">▼</span></div></div><div class="ped-detail">${items||'<p style="color:#5A7A90;font-size:13px">Sin detalle disponible.</p>'}</div></div>`;
+        }).join("");
+        window.togglePed = (i) => { document.getElementById("ped-"+i).classList.toggle("open"); };
+      }
       try {
         const m = await (await fetch("/api/cuenta/metas")).json();
         const cm = $("#metas");
