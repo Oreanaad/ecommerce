@@ -79,7 +79,7 @@ function renderSug() {
 }
 function sugItem(p) {
   return `<div class="t-sug-item ${p.id === SUG_SEL ? "sel" : ""}" data-sugsel="${p.id}">
-    ${p.imagen ? `<img src="${esc(p.imagen)}" data-src="${esc(p.imagen)}" alt="" onerror="imgRetry(this)">` : `<div class="t-sug-ph">🦷</div>`}
+    ${p.imagen ? `<img src="${esc(p.imagen)}" data-src="${esc(p.imagen)}" alt="" onerror="imgRetry(this)">` : `<div class="t-sug-ph" style="background:linear-gradient(135deg,${(GRUPO_PH[p.grupo_id]||['#003A5A','#00AEEF'])[0]},${(GRUPO_PH[p.grupo_id]||['#003A5A','#00AEEF'])[1]})">${(GRUPO_PH[p.grupo_id]||['','','📦'])[2]}</div>`}
     <div class="t-sug-info"><div class="t-sug-name">${esc(p.nombre)}</div>${p.sku ? `<div class="t-sug-sku">SKU ${esc(p.sku)}</div>` : ""}</div>
     <div class="t-sug-price">${precio(p.precio)}</div></div>`;
 }
@@ -91,7 +91,8 @@ function sugPreview() {
   if (!v && esVar) { const vs = (p.variaciones || []).filter(hayStock).map((x) => Number(x.precio) || 0).filter(Boolean); if (vs.length) prc = Math.min(...vs); }
   const stockOk = v ? hayStock(v) : hayStock(p);
   const puede = esVar ? (SUG_VAR && stockOk) : hayStock(p);
-  return `<div class="t-pv-img">${p.imagen ? `<img src="${esc(p.imagen)}" data-src="${esc(p.imagen)}" alt="" onerror="imgRetry(this)">` : `<span class="ph">🦷</span>`}</div>
+  const phd = GRUPO_PH[p.grupo_id]||['#003A5A','#00AEEF','📦'];
+  return `<div class="t-pv-img">${p.imagen ? `<img src="${esc(p.imagen)}" data-src="${esc(p.imagen)}" alt="" onerror="imgRetry(this)">` : `<div class="t-ph" style="background:linear-gradient(135deg,${phd[0]},${phd[1]})">${phd[2]}</div>`}</div>
     <h4 class="t-pv-name">${esc(p.nombre)}</h4>
     <div class="t-pv-sku">${esc(p.sku || p.id)}</div>
     <div class="t-pv-price">${precio(prc)}</div>
@@ -169,11 +170,30 @@ window.imgRetry = function (img) {
   const n = (img._try || 0) + 1; img._try = n;
   const base = (img.getAttribute("data-src") || img.src).split("?")[0];
   if (n <= 3) { setTimeout(() => { img.src = base + "?r=" + n; }, 600 * n); }
-  else { img.replaceWith(Object.assign(document.createElement("span"), { className: "ph", textContent: "🦷" })); }
+  else { const p = img.closest("[data-prod]"); const ph = grupoPlaceholder(p ? Number(p.dataset.prod) : 0); img.replaceWith(ph); }
 };
+const GRUPO_PH = {
+  1:  ['#0369a1','#38bdf8','🔧'], 2:  ['#15803d','#4ade80','🛠️'],
+  3:  ['#b45309','#fbbf24','🔌'], 4:  ['#6d28d9','#a78bfa','💾'],
+  5:  ['#7c3aed','#c084fc','🎧'], 6:  ['#be185d','#f472b6','📱'],
+  7:  ['#0f766e','#5eead4','✦'],  8:  ['#374151','#9ca3af','💻'],
+  9:  ['#b45309','#fde68a','⚡'], 10: ['#0284c7','#7dd3fc','🛡️'],
+  11: ['#1d4ed8','#93c5fd','📱'],12: ['#991b1b','#f87171','🎮'],
+  13: ['#92400e','#fcd34d','✨'],
+};
+function grupoPlaceholder(gid) {
+  const d = GRUPO_PH[gid] || ['#003A5A','#00AEEF','📦'];
+  const el = document.createElement('div');
+  el.className = 't-ph';
+  el.style.background = `linear-gradient(135deg,${d[0]},${d[1]})`;
+  el.textContent = d[2];
+  return el;
+}
 const IMG_ERR = `onerror="imgRetry(this)"`;
-function imgTag(p, cls) {
-  return p.imagen ? `<img src="${esc(p.imagen)}" data-src="${esc(p.imagen)}" loading="lazy" alt="" ${IMG_ERR}>` : `<span class="ph">🦷</span>`;
+function imgTag(p) {
+  if (p.imagen) return `<img src="${esc(p.imagen)}" data-src="${esc(p.imagen)}" loading="lazy" alt="" ${IMG_ERR}>`;
+  const d = GRUPO_PH[p.grupo_id] || ['#003A5A','#00AEEF','📦'];
+  return `<div class="t-ph" style="background:linear-gradient(135deg,${d[0]},${d[1]})">${d[2]}</div>`;
 }
 function card(p) {
   const stock = hayStock(p);
