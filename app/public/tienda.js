@@ -184,7 +184,6 @@ function card(p) {
     <div class="t-card-body">
       ${tags ? `<div class="t-tags">${tags}</div>` : ""}
       <div class="t-card-name">${esc(p.nombre)}</div>
-      ${p.sku ? `<div class="t-card-sku">Cód: ${esc(p.sku)}</div>` : ""}
       ${precios2(p.precio)}
       <button class="t-add" data-add="${p.id}" ${stock ? "" : "disabled"}>${esVar ? "Ver opciones" : "Agregar al carrito"}</button>
     </div>
@@ -245,7 +244,6 @@ function renderModal() {
       </div>
       <button class="t-btn-grande" id="t-add-modal" ${puede ? "" : "disabled"}>${puede ? "Agregar al carrito" : (esVar ? "Elegí una opción" : "Sin stock")}</button>
       ${desc ? `<div class="t-detalle-desc">${esc(desc)}</div>` : ""}
-      <div class="t-detalle-sku">Código: ${esc(p.sku || p.id)}</div>
     </div>`;
   const bv = $("#t-volver"); if (bv) bv.onclick = cerrarProducto;
 }
