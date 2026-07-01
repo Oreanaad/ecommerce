@@ -1403,18 +1403,20 @@ window.addEventListener('scroll',()=>{
   if(d){const s=Math.min(window.scrollY/300,1);d.style.transform=`scaleX(${1-s*0.5})`;}
 });
 
-// TIENDA STRIP: carga los primeros 8 productos con stock
+// TIENDA STRIP: carga los primeros 8 productos con precio real
 (async()=>{
   const grid=document.getElementById('shop-grid');
   if(!grid)return;
+  const PLACEHOLDER="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'%3E%3Crect width='200' height='200' fill='%23E8F7FD'/%3E%3Ccircle cx='100' cy='78' r='28' fill='none' stroke='%2300AEEF' stroke-width='6'/%3E%3Ccircle cx='100' cy='78' r='10' fill='%2300AEEF'/%3E%3Cpath d='M60 130 Q100 95 140 130' stroke='%2300AEEF' stroke-width='6' fill='none' stroke-linecap='round'/%3E%3C/svg%3E";
   try{
     const r=await fetch('/api/tienda/catalogo',{headers:{'Accept-Encoding':'gzip'}});
     const {productos=[]}=await r.json();
-    const top=productos.slice(0,8);
+    const conPrecio=productos.filter(p=>p.precio>0);
+    const top=(conPrecio.length?conPrecio:productos).slice(0,8);
     if(!top.length){grid.innerHTML='<p class="shop-loading">Próximamente…</p>';return;}
-    const fmt=n=>'$'+Number(n||0).toLocaleString('es-AR');
+    const fmt=n=>n>0?'$'+Number(n).toLocaleString('es-AR'):'Consultá precio';
     grid.innerHTML=top.map(p=>`<a class="shop-card" href="/tienda#${p.id}">
-      <img class="shop-card-img" src="${p.imagen||'https://picsum.photos/seed/pd0/400/400'}" alt="${p.nombre.replace(/"/g,'')}" loading="lazy" onerror="this.src='https://picsum.photos/seed/pd0/400/400'">
+      <img class="shop-card-img" src="${p.imagen||PLACEHOLDER}" alt="${p.nombre.replace(/"/g,'')}" loading="lazy" onerror="this.src='${PLACEHOLDER}'">
       <div class="shop-card-body">
         <p class="shop-card-name">${p.nombre}</p>
         <p class="shop-card-price">${fmt(p.precio)}</p>

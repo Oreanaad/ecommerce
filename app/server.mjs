@@ -2968,8 +2968,11 @@ document.getElementById("f").addEventListener("change",async e=>{
     try {
       const q = u.searchParams.get("q") || "";
       const grupo_id = u.searchParams.get("grupo") || null;
+      const subgrupo_id = u.searchParams.get("subgrupo") || null;
+      const sin_precio = u.searchParams.get("sinprecio") === "1";
       const page = Number(u.searchParams.get("page") || 1);
-      return send(res, 200, await listArticulos({ q, grupo_id, page }));
+      const limit = Math.min(Number(u.searchParams.get("limit") || 100), 200);
+      return send(res, 200, await listArticulos({ q, grupo_id, subgrupo_id, sin_precio, page, limit }));
     } catch (e) { return send(res, 500, { error: e.message }); }
   }
   if (u.pathname === "/api/admin/articulos" && req.method === "POST" && esStaff) {

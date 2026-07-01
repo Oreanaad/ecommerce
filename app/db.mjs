@@ -878,27 +878,33 @@ export async function getEstructuraCompleta() {
 
 // ─── CRUD de artículos con clasificación ──────────────────────────────────────
 
-export async function listArticulos({ q = "", grupo_id, page = 1, limit = 50 } = {}) {
+export async function listArticulos({ q = "", grupo_id, subgrupo_id, sin_precio = false, page = 1, limit = 100 } = {}) {
   const db = getPool();
   const offset = (page - 1) * limit;
   const conds = ["p.activo = TRUE"];
   const vals = [];
   if (q) { vals.push(`%${q}%`); conds.push(`(p.nombre ILIKE $${vals.length} OR p.sku ILIKE $${vals.length})`); }
   if (grupo_id) { vals.push(grupo_id); conds.push(`p.grupo_id = $${vals.length}`); }
+  if (subgrupo_id) { vals.push(subgrupo_id); conds.push(`p.subgrupo_id = $${vals.length}`); }
+  if (sin_precio) { conds.push(`(p.precio IS NULL OR p.precio = 0)`); }
   const where = conds.join(" AND ");
+  const countVals = [...vals];
   vals.push(limit, offset);
-  const { rows } = await db.query(
-    `SELECT p.id, p.sku, p.nombre, p.precio, p.precio_regular, p.stock,
-            g.nombre AS grupo, sg.nombre AS subgrupo, mp.nombre AS marca,
-            p.grupo_id, p.subgrupo_id, p.categoria_jer_id, p.subcategoria_jer_id
-     FROM productos p
-     LEFT JOIN grupos g ON g.id = p.grupo_id
-     LEFT JOIN subgrupos sg ON sg.id = p.subgrupo_id
-     LEFT JOIN marcas_prod mp ON mp.id = p.marca_prod_id
-     WHERE ${where} ORDER BY p.actualizado_en DESC LIMIT $${vals.length - 1} OFFSET $${vals.length}`,
-    vals
-  );
-  return rows;
+  const [{ rows }, { rows: ct }] = await Promise.all([
+    db.query(
+      `SELECT p.id, p.sku, p.nombre, p.precio, p.precio_regular, p.stock, p.stock_status,
+              g.nombre AS grupo, sg.nombre AS subgrupo, mp.nombre AS marca,
+              p.grupo_id, p.subgrupo_id, p.categoria_jer_id, p.subcategoria_jer_id
+       FROM productos p
+       LEFT JOIN grupos g ON g.id = p.grupo_id
+       LEFT JOIN subgrupos sg ON sg.id = p.subgrupo_id
+       LEFT JOIN marcas_prod mp ON mp.id = p.marca_prod_id
+       WHERE ${where} ORDER BY p.id LIMIT $${vals.length - 1} OFFSET $${vals.length}`,
+      vals
+    ),
+    db.query(`SELECT COUNT(*) as total FROM productos p WHERE ${where}`, countVals),
+  ]);
+  return { rows, total: parseInt(ct[0].total) };
 }
 
 export async function getArticuloDetalle(id) {

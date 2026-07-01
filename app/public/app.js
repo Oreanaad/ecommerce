@@ -797,7 +797,7 @@ function activarTab(name, fromHash) {
   // resaltar el grupo del menú al que pertenece y cerrar desplegables
   $$(".tabgroup").forEach((g) => { g.classList.toggle("active-group", !!g.querySelector(".tab.active")); g.classList.remove("open"); });
   if (!fromHash && location.hash !== "#" + name) location.hash = name; // URL propia por opción
-  const loaders = { carga: initCarga, piedras: renderPiedras, transferir: renderTransferir, mapa: renderMapa, pedidos: cargarPedidos, ml: cargarML, clientes: cargarClientes, ajustes: cargarAjustes, stats: cargarEstadisticas, finanzas: cargarFinanzas, vencimientos: cargarVencimientos, reparto: cargarReparto, campanas: cargarCampanas, venta: cargarVenta, foto: cargarRecibir, solicitudes: cargarSolicitudes, encargos: cargarEncargos, redes: cargarRedes, promos: cargarPromos, inventario: cargarInventario, articulos: cargarArticulos };
+  const loaders = { carga: initCarga, piedras: renderPiedras, transferir: renderTransferir, mapa: renderMapa, pedidos: cargarPedidos, ml: cargarML, clientes: cargarClientes, ajustes: cargarAjustes, stats: cargarEstadisticas, finanzas: cargarFinanzas, vencimientos: cargarVencimientos, reparto: cargarReparto, campanas: cargarCampanas, venta: cargarVenta, foto: cargarRecibir, solicitudes: cargarSolicitudes, encargos: cargarEncargos, redes: cargarRedes, promos: cargarPromos, inventario: cargarInventario, articulos: cargarArticulos, renombrar: cargarRenombrar };
   if (loaders[name]) loaders[name]();
 }
 $$(".tab").forEach((t) => t.onclick = () => activarTab(t.dataset.tab));
@@ -4448,7 +4448,8 @@ async function artCargarLista() {
   const q = $("#art-q").value.trim();
   const grupo = $("#art-grupo-fil").value;
   const url = `/api/admin/articulos?q=${encodeURIComponent(q)}&grupo=${grupo}`;
-  const lista = await (await fetch(url)).json();
+  const data = await (await fetch(url)).json();
+  const lista = data.rows ?? data;
   const wrap = $("#art-lista");
   if (!lista.length) { wrap.innerHTML = '<p class="meta" style="padding:16px">Sin artículos. Creá el primero.</p>'; return; }
   wrap.innerHTML = `<table class="art-table"><thead><tr><th>SKU</th><th>Nombre</th><th>Grupo</th><th>Subgrupo</th><th>Marca</th><th>Venta</th><th>Stock</th><th></th></tr></thead><tbody>
@@ -4725,3 +4726,208 @@ if (btnSalir) btnSalir.onclick = async () => { await fetch("/api/auth/salir", { 
   }
   const activa = $$(".tab.active")[0]; if (activa) activarTab(activa.dataset.tab, true);
 })();
+
+// ── RENOMBRAR ARTÍCULOS ───────────────────────────────────────────────────────
+const SKU_TIPO = {
+  '611':'Funda Rígida','612':'Funda Flexible','613':'Funda Silicona',
+  '614':'Funda','615':'Book Cover','616':'Funda','617':'Funda',
+  '621':'Funda Tablet','622':'Funda Tablet','623':'Funda Tablet',
+  '624':'Funda Tablet','625':'Funda Tablet','626':'Funda Tablet',
+  '627':'Funda Tablet','628':'Funda Tablet',
+  '631':'Funda Notebook','632':'Funda Notebook','637':'Funda Notebook',
+  '643':'Funda Auricular',
+  '111':'Smartphone','112':'Tablet','113':'Smartwatch','123':'Control',
+  '134':'Cámara','135':'Accesorio',
+  '511':'Auricular','512':'Auricular','521':'Parlante','522':'Parlante',
+  '811':'Cable','812':'Cable','813':'Cable',
+  '821':'Periférico','822':'Periférico',
+  '311':'Adaptador','312':'Adaptador','321':'Splitter','341':'Adaptador',
+};
+const SKU_TIPO_PRE2 = {'71':'Soporte','72':'Holder','73':'Malla','75':'Lápiz Óptico','31':'Adaptador','32':'Splitter','34':'Adaptador','52':'Parlante'};
+
+const SKU_COLOR = {
+  0:'',1:'Negro',2:'Blanco',3:'Gris',4:'Gris claro',5:'Gris oscuro',
+  6:'Plateado',7:'Dorado',8:'Rose Gold',9:'Gris topo',10:'Azul',
+  11:'Azul oscuro',12:'Celeste',13:'Verde',14:'Verde claro',15:'Verde oscuro',
+  16:'Rojo',17:'Bordo',18:'Rosa',19:'Fucsia',20:'Naranja',21:'Amarillo',
+  22:'Violeta',23:'Lavanda',24:'Marrón',25:'Beige',26:'Rosa viejo',27:'Salmón',
+  28:'Turquesa',29:'Rosa pastel',30:'Verde pastel',31:'Violeta pastel',
+  32:'Celeste pastel',33:'Fluo amarillo',34:'Fluo verde',35:'Fluo rosa',
+  36:'Fluo naranja',37:'Amarillo pastel',38:'Granate',39:'Rosa chicle',
+  40:'Multicolor',41:'Azul eléctrico',42:'Cherry',43:'Verde agua',
+  44:'Azul oxford',45:'Rosa Barbie',46:'Rosa palo',47:'Coral',48:'Magenta',
+  49:'Nude',50:'Amarillo ocre',51:'Azul pizarra',52:'Azul petróleo',
+  53:'Verde manzana',54:'Azul grafito',55:'Azul ice',56:'Amarillo limón',
+  57:'Amarillo girasol',58:'Sky blue',59:'Verde arcilla',60:'Púrpura',
+  61:'Camel',62:'White gold',63:'Visón',
+};
+const SKU_COLOR_BG = {
+  1:'#1a1a1a',2:'#9ca3af',3:'#9ca3af',4:'#d1d5db',5:'#6b7280',
+  6:'#c0c0c0',7:'#ffd700',8:'#b76e79',9:'#8b8680',10:'#3b82f6',
+  11:'#1e40af',12:'#7dd3fc',13:'#22c55e',14:'#86efac',15:'#15803d',
+  16:'#ef4444',17:'#7f1d1d',18:'#f472b6',19:'#ec4899',20:'#f97316',
+  21:'#ca8a04',22:'#8b5cf6',23:'#c4b5fd',24:'#92400e',25:'#c4a882',
+  26:'#d4838f',27:'#fca5a5',28:'#06b6d4',29:'#fbcfe8',30:'#bbf7d0',
+  31:'#ddd6fe',32:'#bae6fd',33:'#ca8a04',34:'#65a30d',35:'#f9a8d4',
+  36:'#fb923c',37:'#fde68a',38:'#991b1b',39:'#f9a8d4',40:'#8b5cf6',
+  41:'#0ea5e9',42:'#9f1239',43:'#5eead4',44:'#1e3a5f',45:'#ff69b4',
+  46:'#f0abbc',47:'#fb923c',48:'#db2777',49:'#d6cfc4',50:'#b45309',
+  51:'#334155',52:'#0f766e',53:'#84cc16',54:'#374151',55:'#bae6fd',
+  56:'#fde047',57:'#facc15',58:'#0284c7',59:'#6b7280',60:'#7c3aed',
+  61:'#c2943c',62:'#e5d9b5',63:'#c8b89a',
+};
+
+function renParseSku(sku) {
+  if (!sku) return null;
+  let m = sku.match(/^(\d{3})-(\d+)-C(\d+)$/);
+  if (m) return { prefix: m[1], cod: m[2], colorId: +m[3] };
+  m = sku.match(/^(\d{2})-(\d+)-C(\d+)$/);
+  if (m) return { prefix: m[1], cod: m[2], colorId: +m[3] };
+  m = sku.match(/^(\d+)-(.+?)(?:-C(\d+))?$/);
+  if (m) return { prefix: m[1], cod: m[2], colorId: m[3] != null ? +m[3] : null };
+  return null;
+}
+function renTipo(sku) { const p = renParseSku(sku); if (!p) return ''; return SKU_TIPO[p.prefix] || SKU_TIPO_PRE2[p.prefix.slice(0,2)] || ''; }
+function renColor(sku) { const p = renParseSku(sku); if (!p || p.colorId == null) return ''; return SKU_COLOR[p.colorId] || ''; }
+function renColorBg(sku) { const p = renParseSku(sku); if (!p || p.colorId == null) return '#e5e7eb'; return SKU_COLOR_BG[p.colorId] || '#00AEEF'; }
+
+function renSugerirNombre(sku, nombreActual) {
+  const tipo = renTipo(sku);
+  const color = renColor(sku);
+  if (!tipo) return nombreActual;
+  // Extract device: strip known tipo prefix and color suffix from current name
+  let dev = nombreActual;
+  for (const t of [...Object.values(SKU_TIPO), ...Object.values(SKU_TIPO_PRE2)]) {
+    if (dev.startsWith(t + ' ')) { dev = dev.slice(t.length + 1); break; }
+  }
+  dev = dev.replace(/\s*–\s*.+$/, '').trim();
+  if (!dev || Object.values(SKU_COLOR).includes(dev)) dev = '';
+  const partes = [tipo];
+  if (dev) partes.push(dev);
+  if (color) partes.push('– ' + color);
+  return partes.join(' ');
+}
+
+let REN_PAGE = 1, REN_TOTAL = 0;
+const REN_LIMIT = 100;
+const REN_DIRTY = new Map();
+
+async function cargarRenombrar() {
+  if (!ART_STRUCT) {
+    ART_STRUCT = await (await fetch('/api/admin/param/estructura')).json();
+    artPoblarFiltros();
+  }
+  renPoblarFiltros();
+  $('#ren-buscar').onclick = () => { REN_PAGE = 1; REN_DIRTY.clear(); renCargarPagina(); };
+  $('#ren-q').onkeydown = e => { if (e.key === 'Enter') { REN_PAGE = 1; REN_DIRTY.clear(); renCargarPagina(); } };
+  $('#ren-guardar-todo').onclick = renGuardarTodo;
+  REN_PAGE = 1;
+  await renCargarPagina();
+}
+
+function renPoblarFiltros() {
+  const rg = $('#ren-grupo');
+  rg.innerHTML = '<option value="">Todos los grupos</option>';
+  ART_STRUCT.grupos.forEach(g => { const o = document.createElement('option'); o.value = g.id; o.textContent = g.nombre; rg.appendChild(o); });
+  rg.onchange = () => {
+    const rs = $('#ren-subgrupo');
+    rs.innerHTML = '<option value="">Todos los subgrupos</option>';
+    const gid = +rg.value;
+    if (!gid) return;
+    ART_STRUCT.subgrupos.filter(s => s.grupo_id === gid).forEach(s => { const o = document.createElement('option'); o.value = s.id; o.textContent = s.nombre; rs.appendChild(o); });
+  };
+}
+
+async function renCargarPagina() {
+  const q = $('#ren-q').value.trim();
+  const grupo = $('#ren-grupo').value;
+  const subgrupo = $('#ren-subgrupo').value;
+  const sinprecio = $('#ren-sinprecio').checked ? '1' : '';
+  const url = `/api/admin/articulos?q=${encodeURIComponent(q)}&grupo=${grupo}&subgrupo=${subgrupo}&sinprecio=${sinprecio}&page=${REN_PAGE}&limit=${REN_LIMIT}`;
+  const data = await (await fetch(url)).json();
+  const rows = data.rows ?? data;
+  REN_TOTAL = data.total ?? rows.length;
+  $('#ren-info').textContent = `${REN_TOTAL.toLocaleString()} artículos · página ${REN_PAGE} de ${Math.ceil(REN_TOTAL / REN_LIMIT) || 1}`;
+  const tbody = $('#ren-tbody');
+  if (!rows.length) { tbody.innerHTML = '<tr><td colspan="7" class="meta" style="text-align:center;padding:28px">Sin resultados</td></tr>'; renRenderPager(); return; }
+  tbody.innerHTML = rows.map(a => {
+    const tipo = renTipo(a.sku);
+    const color = renColor(a.sku);
+    const colorBg = renColorBg(a.sku);
+    const isDirty = REN_DIRTY.has(a.id);
+    const d = REN_DIRTY.get(a.id) || {};
+    const nombre = d.nombre ?? a.nombre;
+    const precio = d.precio ?? (a.precio || 0);
+    return `<tr class="ren-row${isDirty?' ren-dirty':''}" data-id="${a.id}">
+      <td><span class="ren-sku">${esc(a.sku||'')}</span></td>
+      <td>${tipo?`<span class="ren-tipo">${esc(tipo)}</span>`:'<span class="meta">—</span>'}</td>
+      <td>${color?`<span class="ren-color-chip" style="background:${colorBg}">${esc(color)}</span>`:'<span class="meta">—</span>'}</td>
+      <td class="ren-nombre-cell">
+        <input class="ren-inp ren-nombre-inp" value="${esc(nombre)}" data-id="${a.id}">
+        <button class="ren-sug" data-id="${a.id}" data-sku="${esc(a.sku||'')}" data-nombre="${esc(a.nombre)}" title="Sugerir nombre del SKU">💡</button>
+      </td>
+      <td><input class="ren-inp ren-precio-inp" type="number" min="0" value="${precio}" data-id="${a.id}" style="width:90px"></td>
+      <td class="meta">${a.stock??0}</td>
+      <td><button class="ren-save-btn btn ghost xs" data-id="${a.id}">💾</button></td>
+    </tr>`;
+  }).join('');
+  tbody.querySelectorAll('.ren-nombre-inp').forEach(inp => inp.addEventListener('input', () => { renMark(+inp.dataset.id, {nombre: inp.value}); inp.closest('tr').classList.add('ren-dirty'); }));
+  tbody.querySelectorAll('.ren-precio-inp').forEach(inp => inp.addEventListener('input', () => { renMark(+inp.dataset.id, {precio: +inp.value}); inp.closest('tr').classList.add('ren-dirty'); }));
+  tbody.querySelectorAll('.ren-sug').forEach(btn => btn.onclick = () => {
+    const sug = renSugerirNombre(btn.dataset.sku, btn.dataset.nombre);
+    const inp = btn.previousElementSibling;
+    inp.value = sug;
+    renMark(+btn.dataset.id, {nombre: sug});
+    btn.closest('tr').classList.add('ren-dirty');
+  });
+  tbody.querySelectorAll('.ren-save-btn').forEach(btn => btn.onclick = () => renGuardarFila(+btn.dataset.id));
+  renRenderPager();
+}
+
+function renMark(id, fields) { REN_DIRTY.set(id, {...(REN_DIRTY.get(id)||{}), ...fields}); }
+
+async function renGuardarFila(id) {
+  const tr = $(`#ren-tbody tr[data-id="${id}"]`);
+  if (!tr) return;
+  const nombre = tr.querySelector('.ren-nombre-inp')?.value;
+  const precio = +(tr.querySelector('.ren-precio-inp')?.value || 0);
+  const btn = tr.querySelector('.ren-save-btn');
+  if (btn) btn.textContent = '…';
+  try {
+    const r = await api(`/api/admin/articulos/${id}`, {nombre, precio}, 'PUT');
+    if (r.ok) { REN_DIRTY.delete(id); tr.classList.remove('ren-dirty'); if (btn) { btn.textContent = '✓'; setTimeout(()=>{btn.textContent='💾';},1400); } }
+    else if (btn) btn.textContent = '💾';
+  } catch { if (btn) btn.textContent = '💾'; }
+}
+
+async function renGuardarTodo() {
+  if (!REN_DIRTY.size) return;
+  const btn = $('#ren-guardar-todo');
+  btn.textContent = 'Guardando…'; btn.disabled = true;
+  let ok = 0;
+  for (const [id] of REN_DIRTY) {
+    const tr = $(`#ren-tbody tr[data-id="${id}"]`);
+    const nombre = tr?.querySelector('.ren-nombre-inp')?.value;
+    const precio = +(tr?.querySelector('.ren-precio-inp')?.value || 0);
+    if (nombre == null) continue;
+    try { const r = await api(`/api/admin/articulos/${id}`, {nombre, precio}, 'PUT'); if (r.ok) { REN_DIRTY.delete(id); tr?.classList.remove('ren-dirty'); ok++; } } catch {}
+  }
+  btn.textContent = `✓ ${ok} guardados`; btn.disabled = false;
+  setTimeout(()=>{ btn.textContent = '💾 Guardar cambios'; }, 2200);
+}
+
+function renRenderPager() {
+  const total = Math.ceil(REN_TOTAL / REN_LIMIT);
+  const el = $('#ren-pager');
+  if (total <= 1) { el.innerHTML = ''; return; }
+  const pages = [];
+  for (let p = Math.max(1, REN_PAGE - 2); p <= Math.min(total, REN_PAGE + 2); p++) pages.push(p);
+  el.innerHTML =
+    (REN_PAGE > 1 ? `<button class="btn ghost sm" id="ren-prev">← Ant.</button>` : '') +
+    pages.map(p => `<button class="btn${p===REN_PAGE?'':' ghost'} sm ren-pg" data-p="${p}">${p}</button>`).join('') +
+    (REN_PAGE < total ? `<button class="btn ghost sm" id="ren-next">Sig. →</button>` : '') +
+    `<span class="meta" style="margin-left:4px">pág. ${REN_PAGE}/${total}</span>`;
+  el.querySelectorAll('.ren-pg').forEach(b => b.onclick = () => { REN_PAGE = +b.dataset.p; renCargarPagina(); });
+  if ($('#ren-prev')) $('#ren-prev').onclick = () => { REN_PAGE--; renCargarPagina(); };
+  if ($('#ren-next')) $('#ren-next').onclick = () => { REN_PAGE++; renCargarPagina(); };
+}

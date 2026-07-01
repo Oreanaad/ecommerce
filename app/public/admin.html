@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Punto Damia · Panel interno</title>
   <link rel="icon" type="image/png" href="/assets/favicon.png?v=2"><link rel="icon" sizes="32x32" href="/assets/favicon-32.png?v=2"><link rel="apple-touch-icon" href="/assets/apple-touch-icon.png?v=2">
-  <link rel="stylesheet" href="/style.css?v=90" />
+  <link rel="stylesheet" href="/style.css?v=91" />
   <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
@@ -46,6 +46,7 @@
           <button class="tab" data-tab="transferir">🔀 Transferir</button>
           <button class="tab" data-tab="piedras">🪨 Piedras</button>
           <button class="tab" data-tab="articulos">🏷️ Artículos</button>
+          <button class="tab" data-tab="renombrar">✏️ Renombrar</button>
           <button class="tab" data-tab="inventario">📋 Inventario</button>
           <button class="tab" data-tab="foto">📷 Recibir mercadería</button>
           <button class="tab" data-tab="vencimientos">⏰ Vencimientos</button>
@@ -335,6 +336,38 @@
           </form>
         </div>
       </div>
+    </section>
+
+    <!-- RENOMBRAR ARTÍCULOS -->
+    <section id="tab-renombrar" class="panel">
+      <div class="art-bar">
+        <input id="ren-q" type="search" placeholder="Buscar nombre o SKU…" autocomplete="off" style="flex:1;min-width:180px">
+        <select id="ren-grupo"><option value="">Todos los grupos</option></select>
+        <select id="ren-subgrupo"><option value="">Todos los subgrupos</option></select>
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;white-space:nowrap;cursor:pointer"><input type="checkbox" id="ren-sinprecio"> Sin precio</label>
+        <button class="btn ghost sm" id="ren-buscar">Buscar</button>
+        <button class="btn sm" id="ren-guardar-todo" style="background:var(--brand);color:#fff">💾 Guardar cambios</button>
+      </div>
+      <div id="ren-info" class="meta" style="padding:6px 2px;font-size:12px"></div>
+      <div style="overflow-x:auto">
+        <table class="ren-table">
+          <thead>
+            <tr>
+              <th style="width:150px">SKU</th>
+              <th style="width:120px">Tipo inferido</th>
+              <th style="width:110px">Color del SKU</th>
+              <th>Nombre</th>
+              <th style="width:110px">Precio $</th>
+              <th style="width:55px">Stock</th>
+              <th style="width:44px"></th>
+            </tr>
+          </thead>
+          <tbody id="ren-tbody">
+            <tr><td colspan="7" class="meta" style="text-align:center;padding:28px">Usá el buscador para cargar artículos</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="ren-pager" id="ren-pager"></div>
     </section>
 
     <!-- INVENTARIO (reconciliación contado vs WooCommerce) -->
