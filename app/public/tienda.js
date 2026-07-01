@@ -594,7 +594,6 @@ $("#t-cart-btn").onclick = () => $("#t-cart").classList.remove("hidden");
 $("#t-cart-close").onclick = () => $("#t-cart").classList.add("hidden");
 $("#t-cart").onclick = (e) => { if (e.target.id === "t-cart") $("#t-cart").classList.add("hidden"); };
 $("#t-checkout").onclick = checkout;
-{ const vc = $("#t-vercarrito"); if (vc) vc.onclick = verCarritoModal; }
 
 init();
 
