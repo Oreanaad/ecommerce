@@ -258,7 +258,8 @@ function agregar(p, variationId, qty) {
   if (!disponible) { toast("Ese producto no tiene stock"); return; }
   const key = keyDe(p.id, variationId);
   const ex = CART.find((i) => i.key === key);
-  const max = (v ? v.stock : p.stock) || 99;
+  const rawMax = v ? v.stock : p.stock;
+  const max = (rawMax && rawMax > 1) ? rawMax : 99;
   if (ex) ex.qty = Math.min(ex.qty + qty, max);
   else CART.push({ key, id: p.id, variationId: variationId || null, nombre: p.nombre, label: v ? v.label : "", precio: v ? v.precio : p.precio, imagen: p.imagen, qty: Math.min(qty, max), max });
   guardarCarrito(); renderCarrito(); toast("Agregado al carrito");
@@ -533,7 +534,7 @@ document.addEventListener("click", (e) => {
   if (qb) { MODAL_QTY = Math.max(1, MODAL_QTY + Number(qb.dataset.qty)); renderModal(); return; }
   if (e.target.id === "t-add-modal") { const p = MODAL_PROD; if (p.tipo === "variable" && !MODAL_VAR) return; agregar(p, MODAL_VAR, MODAL_QTY); cerrarProducto(); return; }
   const cq = e.target.closest("[data-cq]");
-  if (cq) { const [key, d] = cq.dataset.cq.split("|"); const it = CART.find((i) => i.key === key); if (it) { it.qty = Math.max(1, Math.min(it.qty + Number(d), it.max || 99)); guardarCarrito(); renderCarrito(); if (VC_OPEN) verCarritoModal(); } return; }
+  if (cq) { const [key, d] = cq.dataset.cq.split("|"); const it = CART.find((i) => i.key === key); if (it) { const cap = (it.max && it.max > 1) ? it.max : 99; it.qty = Math.max(1, Math.min(it.qty + Number(d), cap)); guardarCarrito(); renderCarrito(); if (VC_OPEN) verCarritoModal(); } return; }
   const cd = e.target.closest("[data-cdel]");
   if (cd) { CART = CART.filter((i) => i.key !== cd.dataset.cdel); guardarCarrito(); renderCarrito(); if (VC_OPEN) { if (CART.length) verCarritoModal(); else cerrarProducto(); } return; }
 });
