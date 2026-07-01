@@ -288,28 +288,26 @@ let VC_OPEN = false;
 function verCarritoModal() {
   if (!CART.length) return;
   const total = CART.reduce((s, i) => s + i.precio * i.qty, 0);
-  const PH_SVG = `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>`;
+  const PH_SVG = `<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>`;
+  const np = CART.length;
   const filas = CART.map((i) => `
     <div class="t-vc-item">
       ${i.imagen ? `<img class="t-vc-img" src="${esc(i.imagen)}" data-src="${esc(i.imagen)}" alt="" onerror="imgRetry(this)">` : `<div class="t-vc-img ph">${PH_SVG}</div>`}
-      <div class="t-vc-info">
-        <div class="t-vc-n">${esc(i.nombre)}${i.label ? ` <span class="t-vc-var">· ${esc(i.label)}</span>` : ""}</div>
+      <div class="t-vc-body">
+        <div class="t-vc-n">${esc(i.nombre)}${i.label ? `<span class="t-vc-var"> · ${esc(i.label)}</span>` : ""}</div>
         ${i.precio > 0 ? `<div class="t-vc-pu">${precio(i.precio)} c/u</div>` : ""}
-        <div class="t-vc-controls">
+        <div class="t-vc-row2">
           <div class="ci-qty"><button data-cq="${i.key}|-1">−</button><span>${i.qty}</span><button data-cq="${i.key}|1">+</button></div>
           <button class="ci-del" data-cdel="${i.key}">Quitar</button>
+          ${i.precio > 0 ? `<span class="t-vc-sub">${precio(i.precio * i.qty)}</span>` : ""}
         </div>
       </div>
-      <div class="t-vc-right">
-        <div class="t-vc-sub">${i.precio > 0 ? precio(i.precio * i.qty) : "—"}</div>
-      </div>
     </div>`).join("");
-  const n = CART.reduce((s, i) => s + i.qty, 0);
   $("#t-modal-body").innerHTML = `<div class="t-vc">
     <div class="t-vc-header">
       <img class="t-vc-logo" src="/assets/logo.png" alt="Punto Damia">
       <h2>Tu pedido</h2>
-      <p class="t-vc-intro">${n} ${n === 1 ? "artículo" : "artículos"} · revisá cantidades antes de confirmar</p>
+      <p class="t-vc-intro">${np} ${np === 1 ? "producto" : "productos"} · revisá antes de confirmar</p>
     </div>
     <div class="t-vc-list">${filas}</div>
     <div class="t-vc-footer">

@@ -307,26 +307,26 @@ button, a, label, .t-cat, .t-subcat, .t-card, .t-cm-hija { -webkit-tap-highlight
 .t-co-cli-card { background: #fff; border: 1px solid var(--brand-400); border-radius: 9px; padding: 9px 12px; margin-top: 8px; font-size: 13.5px; }
 /* ---- Ver carrito (ventana con fotos para confirmar) ---- */
 .t-btn-sec { width:100%; background:#fff; color:var(--brand-500); border:1.5px solid var(--brand-500); border-radius:14px; padding:13px; font-size:15px; font-weight:700; font-family:inherit; cursor:pointer; margin-bottom:8px; }
-.t-vc { max-width:600px; margin:0 auto; padding:36px 24px 40px; text-align:left; }
-.t-vc-header { text-align:center; margin-bottom:28px; }
-.t-vc-logo { height:38px; object-fit:contain; display:block; margin:0 auto 16px; }
-.t-vc h2 { font-size:26px; font-weight:800; margin:0 0 4px; color:#0f172a; }
+.t-vc { max-width:560px; margin:0 auto; padding:32px 20px 40px; }
+.t-vc-header { text-align:center; margin-bottom:24px; }
+.t-vc-logo { height:36px; object-fit:contain; display:block; margin:0 auto 14px; }
+.t-vc h2 { font-size:24px; font-weight:800; margin:0 0 4px; color:#0f172a; }
 .t-vc-intro { color:#94a3b8; font-size:13px; margin:0; }
-.t-vc-list { display:flex; flex-direction:column; gap:0; margin:0 0 8px; }
-.t-vc-item { display:flex; gap:14px; align-items:flex-start; padding:16px 0; border-bottom:1px solid #f1f5f9; }
-.t-vc-img { width:68px; height:68px; object-fit:cover; border-radius:12px; background:var(--brand-soft); flex:0 0 auto; }
-.t-vc-img.ph { display:flex; align-items:center; justify-content:center; color:var(--brand); }
-.t-vc-info { flex:1; min-width:0; }
-.t-vc-n { font-weight:700; font-size:14px; line-height:1.3; color:#0f172a; }
-.t-vc-var { color:#94a3b8; font-size:12px; margin-top:2px; }
-.t-vc-pu { color:#94a3b8; font-size:12px; margin:4px 0 8px; }
-.t-vc-controls { display:flex; align-items:center; gap:10px; }
-.t-vc-right { display:flex; flex-direction:column; align-items:flex-end; gap:8px; flex:0 0 auto; }
-.t-vc-sub { font-family:'Inter',sans-serif; font-weight:800; font-size:17px; color:#0f172a; }
-.t-vc-footer { background:#f8fafc; border-radius:16px; padding:18px 20px; margin-top:16px; }
-.t-vc-total { display:flex; justify-content:space-between; align-items:center; font-family:'Inter',sans-serif; font-size:20px; font-weight:800; color:#0f172a; margin-bottom:16px; }
-.t-vc-total span { font-size:14px; font-weight:600; color:#64748b; }
-@media(max-width:520px){ .t-vc{ padding:24px 16px 32px; } .t-vc-img{ width:58px; height:58px; } .t-vc-sub{ font-size:15px; } }
+.t-vc-list { display:flex; flex-direction:column; }
+.t-vc-item { display:flex; gap:14px; align-items:center; padding:14px 0; border-bottom:1px solid #f1f5f9; }
+.t-vc-img { width:72px; height:72px; object-fit:cover; border-radius:12px; background:#E8F7FD; flex:0 0 72px; }
+.t-vc-img.ph { display:flex; align-items:center; justify-content:center; color:#00AEEF; }
+.t-vc-body { flex:1; min-width:0; }
+.t-vc-n { font-weight:700; font-size:14px; color:#0f172a; line-height:1.3; margin-bottom:6px; }
+.t-vc-var { color:#94a3b8; font-weight:400; font-size:12px; }
+.t-vc-pu { color:#94a3b8; font-size:12px; margin-bottom:6px; }
+.t-vc-row2 { display:flex; align-items:center; gap:10px; }
+.t-vc-sub { margin-left:auto; font-family:'Inter',sans-serif; font-weight:800; font-size:16px; color:#0f172a; white-space:nowrap; }
+.t-vc-footer { background:#f8fafc; border-radius:16px; padding:18px 20px; margin-top:20px; }
+.t-vc-total { display:flex; justify-content:space-between; align-items:baseline; font-family:'Inter',sans-serif; margin-bottom:14px; }
+.t-vc-total span { font-size:14px; font-weight:500; color:#64748b; }
+.t-vc-total strong { font-size:26px; font-weight:800; color:#0f172a; }
+@media(max-width:520px){ .t-vc{ padding:20px 14px 32px; } .t-vc-img{ width:60px; height:60px; flex:0 0 60px; } }
 /* ---- Cupón de descuento ---- */
 .t-co-cupon { display:flex; gap:8px; }
 .t-co-cupon input { flex:1; padding:11px 12px; border:1px solid #D0E8F5; border-radius:11px; font-size:15px; font-family:inherit; background:#fff; }
