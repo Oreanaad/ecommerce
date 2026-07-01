@@ -3,24 +3,36 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>El Pasaje Dental — Pago</title>
+  <title>Punto Damia — Pago</title>
   <link rel="icon" type="image/png" href="/assets/favicon.png?v=2"><link rel="icon" sizes="32x32" href="/assets/favicon-32.png?v=2"><link rel="apple-touch-icon" href="/assets/apple-touch-icon.png?v=2">
-  <link rel="stylesheet" href="/tienda.css?v=4" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Syne:wght@700;800&display=swap" rel="stylesheet">
   <style>
-    .pago-wrap { min-height: 70vh; display: flex; align-items: center; justify-content: center; padding: 24px; }
-    .pago-card { background: #fff; border: 1px solid #eedfe7; border-radius: 18px; box-shadow: 0 8px 30px rgba(122,16,64,.08); padding: 40px 32px; max-width: 460px; text-align: center; }
-    .pago-ico { font-size: 56px; line-height: 1; margin-bottom: 12px; }
-    .pago-card h1 { font-family: 'Syne', sans-serif; color: var(--wine-800); font-size: 24px; margin: 0 0 10px; }
-    .pago-card p { color: var(--text-mid); font-size: 15px; line-height: 1.6; margin: 6px 0; }
-    .pago-ref { font-size: 13px; color: var(--text-light); margin-top: 8px; }
-    .pago-btns { margin-top: 22px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
-    .pago-btn { display: inline-block; text-decoration: none; padding: 12px 20px; border-radius: 12px; font-weight: 700; font-size: 14px; }
-    .pago-btn.p { background: var(--rose-500); color: #fff; }
-    .pago-btn.s { background: #fff; color: var(--wine-800); border: 1.5px solid #e4cdd9; }
-    .pago-datos { background: #faf3f7; border: 1px solid #f0dbe7; border-radius: 12px; padding: 14px 16px; text-align: left; font-size: 14px; margin-top: 16px; }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Inter',sans-serif;background:#f0f9ff;color:#0D1B2A;min-height:100vh;display:flex;flex-direction:column}
+    .top{background:#fff;border-bottom:1px solid #D0E8F5;padding:14px 24px;display:flex;align-items:center;justify-content:space-between}
+    .top img{height:40px}
+    .top a{color:#1A2B3C;text-decoration:none;font-size:14px;font-weight:600}.top a:hover{color:#00AEEF}
+    .pago-wrap{flex:1;display:flex;align-items:center;justify-content:center;padding:40px 24px}
+    .pago-card{background:#fff;border:1px solid #D0E8F5;border-radius:20px;box-shadow:0 8px 32px rgba(0,136,200,.1);padding:44px 36px;max-width:480px;width:100%;text-align:center}
+    .pago-ico{font-size:56px;line-height:1;margin-bottom:16px}
+    .pago-card h1{font-family:'Syne',sans-serif;color:#003A5A;font-size:26px;margin:0 0 10px;font-weight:800}
+    .pago-card p{color:#5A7A90;font-size:15px;line-height:1.6;margin:6px 0}
+    .pago-ref{font-size:13px;color:#5A7A90;margin-top:10px}
+    .pago-btns{margin-top:24px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+    .pago-btn{display:inline-block;text-decoration:none;padding:13px 22px;border-radius:12px;font-weight:700;font-size:14px;transition:background .2s}
+    .pago-btn.p{background:#00AEEF;color:#fff}.pago-btn.p:hover{background:#0088C8}
+    .pago-btn.s{background:#fff;color:#0088C8;border:1.5px solid #B3E5FC}.pago-btn.s:hover{background:#E8F7FD}
+    .pago-datos{background:#E8F7FD;border:1px solid #B3E5FC;border-radius:14px;padding:16px 18px;text-align:left;font-size:14px;margin-top:18px;line-height:1.7;color:#0D1B2A}
+    .pago-datos strong{color:#003A5A}
+    .pago-datos em{color:#5A7A90}
   </style>
 </head>
 <body>
+  <div class="top">
+    <a href="/"><img src="/assets/logo.png" alt="Punto Damia" onerror="this.outerHTML='<span style=\'font-family:Syne,sans-serif;font-weight:800;color:#00AEEF;font-size:18px\'>punto damia</span>'"></a>
+    <div><a href="/tienda" style="margin-right:18px">Tienda</a><a href="/mi-cuenta">Mi cuenta</a></div>
+  </div>
   <div class="pago-wrap"><div class="pago-card" id="card"></div></div>
   <script>
     const path = location.pathname.replace(/\/$/, "").split("/").pop();
@@ -42,7 +54,7 @@
         ? `<div class="pago-datos"><strong>Datos para transferir:</strong><br>El Pasaje Dental<br>CBU / alias: <em>(te los pasamos al confirmar)</em><br>Enviá el comprobante por WhatsApp y preparamos tu pedido.</div>`
         : `<div class="pago-datos"><strong>Retiro en el local:</strong><br>Coordinamos el retiro y pagás en efectivo al retirar.</div>`;
       html = `<div class="pago-ico">🧾</div><h1>¡Pedido recibido!</h1><p>Tu pedido quedó registrado.</p>${datos}${ref}${volver}`;
-    } else { // error
+    } else {
       html = `<div class="pago-ico">⚠️</div><h1>El pago no se completó</h1><p>No se pudo procesar el pago. No te preocupes, no se hizo ningún cobro. Podés intentar de nuevo.</p>${ref}<div class="pago-btns"><a class="pago-btn p" href="/tienda">Volver a la tienda</a></div>`;
     }
     document.getElementById("card").innerHTML = html;
