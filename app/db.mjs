@@ -27,7 +27,12 @@ export async function initDb() {
   const db = getPool();
   await db.query(`
     CREATE SEQUENCE IF NOT EXISTS pedidos_id_seq START 1;
-  `).catch(() => {}); // ya existe en re-runs
+    CREATE SEQUENCE IF NOT EXISTS productos_id_seq START 2000;
+  `).catch(() => {});
+  // Asignar DEFAULT a productos.id para que crearArticulo funcione sin id externo
+  await db.query(`
+    ALTER TABLE productos ALTER COLUMN id SET DEFAULT nextval('productos_id_seq');
+  `).catch(() => {});
   await db.query(`
     CREATE TABLE IF NOT EXISTS categorias (
       id        INTEGER PRIMARY KEY,
@@ -341,13 +346,14 @@ export async function upsertProducto(p) {
     `INSERT INTO productos
        (id, sku, nombre, tipo, precio, precio_regular, stock, stock_status,
         categorias, marca, descripcion, descripcion_corta, imagen, imagenes,
-        url, slug, peso, dimensiones, activo, actualizado_en)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,NOW())
+        url, slug, peso, dimensiones, activo, grupo_id, subgrupo_id, actualizado_en)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,NOW())
      ON CONFLICT (id) DO UPDATE SET
        sku=$2, nombre=$3, tipo=$4, precio=$5, precio_regular=$6,
        stock=$7, stock_status=$8, categorias=$9, marca=$10,
        descripcion=$11, descripcion_corta=$12, imagen=$13, imagenes=$14,
-       url=$15, slug=$16, peso=$17, dimensiones=$18, activo=$19, actualizado_en=NOW()`,
+       url=$15, slug=$16, peso=$17, dimensiones=$18, activo=$19,
+       grupo_id=$20, subgrupo_id=$21, actualizado_en=NOW()`,
     [
       p.id, p.sku || "", p.nombre, p.tipo || "simple",
       p.precio || 0, p.precio_regular || p.precio || 0,
@@ -357,6 +363,7 @@ export async function upsertProducto(p) {
       p.imagen || "", JSON.stringify(p.imagenes || []),
       p.url || "", p.slug || "", p.peso || "",
       JSON.stringify(p.dimensiones || {}), p.activo !== false,
+      p.grupo_id || null, p.subgrupo_id || null,
     ]
   );
 }
@@ -425,6 +432,37 @@ export async function getCatalogo() {
     total_variaciones: productos.reduce((n, p) => n + p.variaciones.length, 0),
     categorias, productos,
   };
+}
+
+// Jerarquía de categorías desde grupos/subgrupos, con conteo de productos
+export async function getCategoriasJerarquia() {
+  const db = getPool();
+  const { rows: grupos } = await db.query(`
+    SELECT g.id, g.nombre,
+      COUNT(DISTINCT p.id) FILTER (WHERE p.activo AND p.stock_status = 'instock') AS total
+    FROM grupos g
+    LEFT JOIN productos p ON p.grupo_id = g.id
+    GROUP BY g.id, g.nombre
+    ORDER BY g.id
+  `);
+  const { rows: subs } = await db.query(`
+    SELECT s.id, s.grupo_id, s.nombre,
+      COUNT(DISTINCT p.id) FILTER (WHERE p.activo AND p.stock_status = 'instock') AS total
+    FROM subgrupos s
+    LEFT JOIN productos p ON p.subgrupo_id = s.id
+    GROUP BY s.id, s.grupo_id, s.nombre
+    ORDER BY s.grupo_id, s.id
+  `);
+  return grupos
+    .filter(g => Number(g.total) > 0)
+    .sort((a, b) => Number(b.total) - Number(a.total))
+    .map(g => ({
+      id: g.id, name: g.nombre, count: Number(g.total),
+      hijas: subs
+        .filter(s => s.grupo_id === g.id && Number(s.total) > 0)
+        .sort((a, b) => Number(b.total) - Number(a.total))
+        .map(s => ({ id: s.id, name: s.nombre, count: Number(s.total), parent: g.id })),
+    }));
 }
 
 export async function getProducto(id) {

@@ -224,6 +224,49 @@
         <select id="art-grupo-fil"><option value="">Todos los grupos</option></select>
         <button class="btn ghost sm" id="art-buscar">Buscar</button>
         <button class="btn sm" id="art-nuevo">+ Nuevo artículo</button>
+        <button class="btn ghost sm" id="art-importar-btn">📥 Importar CSV</button>
+        <button class="btn ghost sm" id="art-vinc-btn">🗂️ Importar Vinculaciones</button>
+      </div>
+
+      <!-- MODAL IMPORTAR VINCULACIONES -->
+      <div id="art-vinc-modal" class="modal hidden">
+        <div class="modal-box" style="max-width:640px">
+          <div class="modal-head">
+            <h3>🗂️ Importar Vinculaciones</h3>
+            <button class="btn ghost sm" id="art-vinc-cerrar">✕</button>
+          </div>
+          <p class="meta" style="margin-bottom:12px">Formato Punto Damia: <code>Vinculaciones_X_Y.xlsx</code> exportado como CSV. Agrupa por SKU+tipo+color y crea un artículo por combinación.</p>
+          <label class="btn ghost sm" style="cursor:pointer;display:inline-flex;align-items:center;gap:6px">
+            📎 Elegir CSV de Vinculaciones
+            <input type="file" id="art-vinc-file" accept=".csv,text/csv" hidden>
+          </label>
+          <div id="art-vinc-preview" style="margin-top:14px;font-size:13px"></div>
+          <div class="modal-foot" style="margin-top:16px;display:flex;gap:10px;align-items:center">
+            <button class="btn" id="art-vinc-ok" disabled>Importar</button>
+            <span id="art-vinc-status" class="meta"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- MODAL IMPORTAR CSV -->
+      <div id="art-import-modal" class="modal hidden">
+        <div class="modal-box" style="max-width:680px">
+          <div class="modal-head">
+            <h3>📥 Importar artículos desde CSV</h3>
+            <button class="btn ghost sm" id="art-import-cerrar">✕</button>
+          </div>
+          <p class="meta" style="margin-bottom:12px">Columnas requeridas: <code>nombre</code>, <code>precio</code>. Opcionales: <code>sku</code>, <code>precio_costo</code>, <code>stock</code>, <code>grupo</code>, <code>subgrupo</code>, <code>marca</code>, <code>descripcion</code>, <code>imagen</code>.</p>
+          <a id="art-import-tpl" href="#" class="meta" style="display:block;margin-bottom:14px;color:var(--blue)">⬇ Descargar plantilla CSV</a>
+          <label class="btn ghost sm" style="cursor:pointer;display:inline-flex;align-items:center;gap:6px">
+            📎 Elegir archivo CSV
+            <input type="file" id="art-import-file" accept=".csv,text/csv" hidden>
+          </label>
+          <div id="art-import-preview" style="margin-top:16px;font-size:13px"></div>
+          <div class="modal-foot" style="margin-top:16px;display:flex;gap:10px;align-items:center">
+            <button class="btn" id="art-import-ok" disabled>Importar</button>
+            <span id="art-import-status" class="meta"></span>
+          </div>
+        </div>
       </div>
       <div id="art-lista" class="art-lista"></div>
 
@@ -517,6 +560,6 @@
 
   <div id="toast" class="toast hidden"></div>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-  <script src="/app.js?v=176"></script>
+  <script src="/app.js?v=178"></script>
 </body>
 </html>

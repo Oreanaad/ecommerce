@@ -11,8 +11,8 @@ import { fileURLToPath } from "node:url";
 import { dirname, join, extname } from "node:path";
 import { dataDir, loadAnthropic, loadResend, duenos } from "../scripts/lib.mjs";
 import {
-  initDb, getCatalogo, getProducto, upsertProducto, upsertVariacion,
-  setStock, setPrecio, adjustStock, getCategorias, upsertCategoria,
+  initDb, getPool, getCatalogo, getProducto, upsertProducto, upsertVariacion,
+  setStock, setPrecio, adjustStock, getCategorias, upsertCategoria, getCategoriasJerarquia,
   crearPedido, getPedido, getPedidos, updatePedidoStatus, updatePedido,
   getCliente, upsertCliente, getClientes, buscarClientes, actualizarCliente,
   getCupones, getCupon, crearCupon, borrarCupon, incrementarUsoCupon,
@@ -621,11 +621,7 @@ const server = createServer(async (req, res) => {
   if (u.pathname === "/api/tienda/categorias") {
     if (!CATS_CACHE || Date.now() - CATS_TS > 600000) {
       try {
-        const cats = await getCategorias();
-        CATS_CACHE = cats.filter((c) => c.parent_id === 0).sort((a, b) => (b.count || 0) - (a.count || 0))
-          .map((p) => ({ id: p.id, name: p.nombre, slug: p.slug, count: p.count || 0,
-            hijas: cats.filter((c) => c.parent_id === p.id).sort((a, b) => (b.count || 0) - (a.count || 0))
-              .map((h) => ({ id: h.id, name: h.nombre, slug: h.slug, count: h.count || 0, parent: p.id })) }));
+        CATS_CACHE = await getCategoriasJerarquia();
         CATS_TS = Date.now();
       } catch { CATS_CACHE = []; }
     }
@@ -1329,7 +1325,7 @@ const server = createServer(async (req, res) => {
       const vFicha = (vd.items || []).find((x) => x.origen === "ficha" && String(x.productId) === String(id));
       const combo = (await readJson(COMBOS_PATH, {}))[String(id)] || null;
       const imagenes = Array.isArray(p.imagenes) ? p.imagenes : (p.imagen ? [{ src: p.imagen }] : []);
-      return send(res, 200, { id: p.id, tipo: p.tipo, nombre: p.nombre, sku: p.sku || "", descripcion: p.descripcion || "", descripcion_corta: p.descripcion_corta || "", images: imagenes, variaciones: (p.variaciones || []).map((v) => ({ id: v.id, label: v.label || "", precio: Number(v.precio) || 0, stock: v.stock, imagen: v.imagen || "" })), precio: Number(p.precio) || 0, stock: p.stock, peso: p.peso || "", slug: p.slug || "", categorias: (p.categorias || []).map((nombre) => ({ id: null, name: nombre })), dimensiones: p.dimensiones || { length: "", width: "", height: "" }, costo, proveedorId, proveedores, vencimiento: vFicha ? vFicha.fecha : "", combo });
+      return send(res, 200, { id: p.id, tipo: p.tipo, nombre: p.nombre, sku: p.sku || "", descripcion: p.descripcion || "", descripcion_corta: p.descripcion_corta || "", images: imagenes, variaciones: (p.variaciones || []).map((v) => ({ id: v.id, label: v.label || "", precio: Number(v.precio) || 0, stock: v.stock, imagen: v.imagen || "" })), precio: Number(p.precio) || 0, stock: p.stock, peso: p.peso || "", slug: p.slug || "", categorias: (p.categorias || []).map((nombre) => ({ id: null, name: nombre })), grupo_id: p.grupo_id || null, subgrupo_id: p.subgrupo_id || null, dimensiones: p.dimensiones || { length: "", width: "", height: "" }, costo, proveedorId, proveedores, vencimiento: vFicha ? vFicha.fecha : "", combo });
     } catch (e) { return send(res, 500, { error: e.message }); }
   }
   // ---- Combo: definir los componentes de un producto-combo (staff) ----
@@ -1362,6 +1358,20 @@ const server = createServer(async (req, res) => {
     if (b.slug != null && b.slug !== "") campos.slug = String(b.slug).trim();
     if (b.sku != null) campos.sku = String(b.sku).trim();
     if (Array.isArray(b.categorias)) campos.categorias = b.categorias;
+    if (b.grupo_id !== undefined) campos.grupo_id = b.grupo_id ? Number(b.grupo_id) : null;
+    if (b.subgrupo_id !== undefined) campos.subgrupo_id = b.subgrupo_id ? Number(b.subgrupo_id) : null;
+    // Si se cambió grupo o subgrupo, reconstruir el JSONB categorias
+    if (campos.grupo_id !== undefined || campos.subgrupo_id !== undefined) {
+      try {
+        const db = getPool();
+        const gid = campos.grupo_id ?? (await db.query(`SELECT grupo_id FROM productos WHERE id=$1`,[Number(b.id)])).rows[0]?.grupo_id;
+        const sid = campos.subgrupo_id ?? (await db.query(`SELECT subgrupo_id FROM productos WHERE id=$1`,[Number(b.id)])).rows[0]?.subgrupo_id;
+        const cats = [];
+        if (gid) { const g = (await db.query(`SELECT nombre FROM grupos WHERE id=$1`,[gid])).rows[0]; if (g) cats.push(g.nombre); }
+        if (sid) { const s = (await db.query(`SELECT nombre FROM subgrupos WHERE id=$1`,[sid])).rows[0]; if (s) cats.push(s.nombre); }
+        if (cats.length) campos.categorias = cats;
+      } catch {}
+    }
     try {
       await upsertProducto({ id: Number(b.id), ...campos });
       if (b.costo != null && b.costo !== "") { try { await FIN.setCostos({ [b.id]: Number(b.costo) }); } catch {} }
@@ -1386,12 +1396,11 @@ const server = createServer(async (req, res) => {
       return send(res, 200, { ok: true, precio: campos.precio, stock: campos.stock, imagen: campos.imagen || "" });
     } catch (e) { return send(res, 500, { error: e.message }); }
   }
-  // ---- Lista de categorías (para el editor/alta) ----
+  // ---- Lista de categorías (grupos/subgrupos para el editor) ----
   if (u.pathname === "/api/admin/categorias-wc") {
     if (!(await esStaff(req))) return send(res, 401, { error: "No autorizado" });
     try {
-      const cats = await getCategorias();
-      return send(res, 200, { categorias: cats.map((c) => ({ id: c.id, name: c.nombre, parent: c.parent_id || 0 })) });
+      return send(res, 200, { categorias: await getCategoriasJerarquia() });
     } catch { return send(res, 200, { categorias: [] }); }
   }
   // ---- Alta de producto nuevo en la DB ----
@@ -1401,8 +1410,14 @@ const server = createServer(async (req, res) => {
     if (!b.nombre) return send(res, 400, { error: "Falta el nombre del producto" });
     const stock = b.stock != null && b.stock !== "" ? Math.max(0, Math.round(Number(b.stock)) || 0) : 0;
     try {
-      const id = Date.now(); // ID temporal único hasta tener sequence propio en el form
-      await upsertProducto({ id, sku: b.sku ? String(b.sku).trim() : "", nombre: b.nombre, tipo: "simple", precio: b.precio != null && b.precio !== "" ? Math.max(0, Math.round(Number(b.precio)) || 0) : 0, stock, stock_status: stock > 0 ? "instock" : "outofstock", categorias: Array.isArray(b.categorias) ? b.categorias : [], descripcion: b.descripcion || "", descripcion_corta: b.descripcion_corta || "", imagen: Array.isArray(b.images) && b.images[0] ? b.images[0].src : "", imagenes: Array.isArray(b.images) ? b.images : [], peso: b.peso ? String(b.peso) : "", activo: true });
+      const id = Date.now();
+      const db = getPool();
+      const gid = b.grupo_id ? Number(b.grupo_id) : null;
+      const sid = b.subgrupo_id ? Number(b.subgrupo_id) : null;
+      const cats = [];
+      if (gid) { const g = (await db.query(`SELECT nombre FROM grupos WHERE id=$1`,[gid])).rows[0]; if (g) cats.push(g.nombre); }
+      if (sid) { const s = (await db.query(`SELECT nombre FROM subgrupos WHERE id=$1`,[sid])).rows[0]; if (s) cats.push(s.nombre); }
+      await upsertProducto({ id, sku: b.sku ? String(b.sku).trim() : "", nombre: b.nombre, tipo: "simple", precio: b.precio != null && b.precio !== "" ? Math.max(0, Math.round(Number(b.precio)) || 0) : 0, stock, stock_status: stock > 0 ? "instock" : "outofstock", categorias: cats.length ? cats : [], grupo_id: gid, subgrupo_id: sid, descripcion: b.descripcion || "", descripcion_corta: b.descripcion_corta || "", imagen: Array.isArray(b.images) && b.images[0] ? b.images[0].src : "", imagenes: Array.isArray(b.images) ? b.images : [], peso: b.peso ? String(b.peso) : "", activo: true });
       await buildCatCache();
       return send(res, 200, { ok: true, id });
     } catch (e) { return send(res, 500, { error: e.message }); }
@@ -2985,6 +3000,65 @@ document.getElementById("f").addEventListener("change",async e=>{
     } catch (e) { return send(res, 500, { error: e.message }); }
   }
 
+  // Importación masiva de artículos desde CSV (resuelve nombres de grupo/subgrupo/marca a IDs)
+  if (u.pathname === "/api/admin/articulos/importar" && req.method === "POST") {
+    if (!await esStaff(req)) return send(res, 401, { error: "No autorizado" });
+    try {
+      const { articulos = [] } = await readBody(req);
+      if (!articulos.length) return send(res, 400, { error: "Sin artículos" });
+      const db = getPool();
+      // Cargar tablas de lookup en memoria
+      const [gRes, sgRes, mpRes] = await Promise.all([
+        db.query(`SELECT id, nombre FROM grupos WHERE activo`),
+        db.query(`SELECT id, nombre, grupo_id FROM subgrupos WHERE activo`),
+        db.query(`SELECT id, nombre FROM marcas_prod WHERE activo`),
+      ]);
+      const norm = s => (s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").trim();
+      const byName = (rows, name) => rows.find(r => norm(r.nombre) === norm(name));
+      const creados = [], errores = [];
+      for (const a of articulos) {
+        try {
+          const grupo = byName(gRes.rows, a.grupo);
+          const sg    = grupo ? byName(sgRes.rows.filter(r => r.grupo_id === grupo.id), a.subgrupo) : null;
+          const marca = byName(mpRes.rows, a.marca);
+          const art = await crearArticulo({
+            nombre:       a.nombre || "",
+            sku:          a.sku || "",
+            descripcion:  a.descripcion || "",
+            precio:       Number(a.precio) || 0,
+            precio_regular: Number(a.precio_costo) || Number(a.precio) || 0,
+            stock:        Number(a.stock) || 0,
+            grupo_id:     grupo?.id || null,
+            subgrupo_id:  sg?.id || null,
+            marca_prod_id: marca?.id || null,
+          });
+          // Guardar imagen si viene
+          if (a.imagen && art.id) {
+            await db.query(
+              `UPDATE productos SET imagen=$1, imagenes=$2 WHERE id=$3`,
+              [a.imagen, JSON.stringify([a.imagen]), art.id]
+            ).catch(() => {});
+          }
+          creados.push({ id: art.id, nombre: a.nombre });
+        } catch (e) {
+          errores.push({ nombre: a.nombre, error: e.message });
+        }
+      }
+      return send(res, 200, { ok: true, creados: creados.length, errores });
+    } catch (e) { return send(res, 500, { error: e.message }); }
+  }
+
+  // Importar Vinculaciones (formato Punto Damia: matriz SKU × modelo × color × atributos)
+  if (u.pathname === "/api/admin/articulos/importar-vinculaciones" && req.method === "POST") {
+    if (!await esStaff(req)) return send(res, 401, { error: "No autorizado" });
+    try {
+      const { csv = "" } = await readBody(req);
+      if (!csv) return send(res, 400, { error: "Sin CSV" });
+      const result = await importarVinculaciones(csv);
+      return send(res, 200, result);
+    } catch (e) { return send(res, 500, { error: e.message }); }
+  }
+
   // ---- Estaticos ----
   let path = u.pathname === "/" ? "/index.html" : u.pathname;
   try {
@@ -3001,6 +3075,265 @@ document.getElementById("f").addEventListener("change",async e=>{
     return send(res, 404, "No encontrado", "text/plain");
   }
 });
+
+// ─── Importador Vinculaciones ─────────────────────────────────────────────────
+// Parsea el formato CSV de Punto Damia (Vinculaciones_X_Y.xlsx):
+//   fila 1-3 metadatos, fila 4 = headers, fila 5+ = datos
+//   agrupa por (Codigo_Viejo, C_Nuevo_BASE, Color) → un producto
+//   múltiples filas del mismo grupo suman modelos compatibles
+async function importarVinculaciones(csvText) {
+  const db = getPool();
+
+  // iPhone abbreviation → nombre completo en DB
+  const IP = {
+    '5':'iPhone 5','5S':'iPhone 5S','6':'iPhone 6','6PLUS':'iPhone 6 Plus',
+    '6_PLUS':'iPhone 6 Plus','6SPLUS':'iPhone 6S Plus','6SPLUS':'iPhone 6S Plus',
+    '6sPLUS':'iPhone 6S Plus','7':'iPhone 7','7PLUS':'iPhone 7 Plus',
+    '8':'iPhone 8','8PLUS':'iPhone 8 Plus','X':'iPhone X','XR':'iPhone XR',
+    'XS':'iPhone XS','XSMAX':'iPhone XS Max','11':'iPhone 11',
+    '11PRO':'iPhone 11 Pro','11PROMAX':'iPhone 11 Pro Max',
+    'SE':'iPhone SE (2020)','SE_2G':'iPhone SE (2020)',
+    '12MINI':'iPhone 12 Mini','12':'iPhone 12','12PRO':'iPhone 12 Pro',
+    '12PROMAX':'iPhone 12 Pro Max','13MINI':'iPhone 13 Mini','13':'iPhone 13',
+    '13PRO':'iPhone 13 Pro','13PROMAX':'iPhone 13 Pro Max',
+    '14':'iPhone 14','14PLUS':'iPhone 14 Plus','14plus':'iPhone 14 Plus',
+    '14PRO':'iPhone 14 Pro','14PROMAX':'iPhone 14 Pro Max',
+    '15':'iPhone 15','15PLUS':'iPhone 15 Plus','15PRO':'iPhone 15 Pro',
+    '15PROMAX':'iPhone 15 Pro Max','15ULTRA':'iPhone 15 Ultra',
+    '16':'iPhone 16','16E':'iPhone 16e','16PLUS':'iPhone 16 Plus',
+    '16PRO':'iPhone 16 Pro','16PROMAX':'iPhone 16 Pro Max',
+    '17':'iPhone 17','17AIR':'iPhone 17 Air','17AR':'iPhone 17 Air',
+    '17PLUS':'iPhone 17 Plus','17PRO':'iPhone 17 Pro','17PROMAX':'iPhone 17 Pro Max',
+  };
+
+  // C_Nuevo_BASE → label y nombre en categorias_jerarquia
+  const BASE_LABEL = { '611':'Rígida','612':'Flexible','613':'Silicona','614':'Otro','616':'Otro' };
+  const BASE_CAT   = { '611':'Rigidas','612':'Flexibles','613':'Silicona','614':'Otro','616':'Otro' };
+
+  // Normaliza header CSV → nombre de atributo en DB (case/accents/símbolos)
+  const normH = h => (h||'').trim()
+    .toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g,'')  // quita acentos
+    .replace(/\s*\(\d+\)/g,'')                         // quita "(6)" "(4)" "(5)"
+    .replace(/[\/\s]+/g,'_')                            // / y espacios → _
+    .replace(/_+$/,'');
+
+  const COL_ATR = {
+    'funcion':'funcion', 'mecanismo_agarre':'mecanismo_agarre', 'tipo_uso':'tipo_uso',
+    'tipo_fuente_luz':'tipo_fuente_luz', 'tipo_microfono':'tipo_microfono',
+    'tipo_conexion':'tipo_conexion', 'sistema_encastre':'sistema_encastre',
+    'tipo_lapiz':'tipo_lapiz', 'sistema_ajuste_malla':'sistema_ajuste_malla',
+    'tipo_de_base':'tipo_de_base', 'c_almacenamiento':'c_almacenamiento',
+    'cancelacion_sonido':'cancelacion_sonido', 'microfono':'microfono', 'sonido':'sonido',
+    'plataforma_comaptible':'plataforma_compatible', 'entrada_mic':'entrada_mic',
+    'funcion_senal':'funcion_senal', 'cantida_botones':'cantidad_de_botones',
+    'vibraciones':'vibracion', 'tipo_de_cable':'tipo_de_cable',
+    'tipo_de_carga':'tipo_carga', 'covertura_film':'covertura_film',
+    'tipo_film':'tipo_film', 'funcion_lensun':'funcion_lensun',
+    'estado_equipo':'estado_equipo', 'tipo_gps':'tipo_gps',
+    'tipo_de_prodcuto':'tipo_de_producto', 'tipo_de_juego':'tipo_de_juego',
+    'capacidad_liquidos':'capacidad_liquidos',
+    'estruct':'estructura', 'tipo_bumper':'tipo_bumper', 'tipo_fijacion':'tipo_fijacion',
+    'material':'material', 'kit_incluye':'kit_incluye', 'tipo_punta':'tipo_punta',
+    'tipo_formato':'tipo_formato', 'formato_auricular':'formato_auricular',
+    'formato_tamano':'formato_tamano', 'cant_puertos':'cantidad_puertos',
+    'tipo_dispositivo_interactivo':'tipo_dispositivo_interactivo',
+    'tipo_mouse':'tipo_mouse', 'formato_teclado':'formato_teclado',
+    'distribucion_teclado':'distribucion_teclado', 'resolucion':'resolucion',
+    'tipo_controlador':'tipo_controlador', 'tipo_consola':'tipo_consola',
+    'generacion_consola':'generacion_consola', 'tipo_plataforma':'tipo_plataforma',
+    'tipo_de_cargador':'tipo_de_cargador', 'tipo_de_fuente':'tipo_de_fuente',
+    'linea_lensun':'linea_lensun', 'tipo_equipo':'tipo_equipo',
+    'dispositivo_streaming':'dispositivo_streaming',
+    'visuales':'visual', 'tipo_brillo_acabado':'tipo_brillo_acabado',
+    'acabado_lensun':'acabado_lensun', 'tipo_borde':'tipo_borde',
+    'tipo_diseno':'tipo_diseno',
+    'interfaz_entrada_input':'tipo_interfaz', 'tipo_alimentacion':'tipo_alimentacion',
+    'cantidad_microfonos':'cantidad_microfonos', 'temperatura_color':'temperatura_color',
+    'plug_and_play':'plug_and_play', 'generacion':'generacion',
+    'formato_tarjeta':'formato_tarjeta', 'clase_veloc_msd':'clase_veloc_msd',
+    'tecnologia_wireless':'tecnologia_wireless', 'estandar_wifi':'estandar_wifi',
+    'banda':'banda', 'categoria_de_red':'categoria_de_red',
+    'tipo_senal_audio':'tipo_senal_audio', 'estandar_hdmi':'estandar_hdmi',
+    'conexion_video':'conexion_video', 'potencia':'potencia_w',
+    'volt_max':'voltaje_max_v', 'tipo_de_pilas_compat':'tipo_pilas',
+    'almacenamiento_gb':'almacenamiento_gb', 'memoria_ram':'memoria_ram_gb',
+    'tipo_ram':'tipo_ram', 'formato_ram':'formato_ram',
+    'frecuencia':'frecuencia_mhz', 'tipo_bateria':'tipo_bateria',
+    'capacidad_bateria':'capacidad_bateria_mah',
+  };
+
+  // 1. Parsear CSV
+  const lines = csvText.replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n');
+  const rows = lines.map(l => l.split(','));
+
+  // Encontrar fila de encabezados (la que tiene "Codigo" y "Viejo")
+  let hdrIdx = -1;
+  for (let i = 0; i < Math.min(10, rows.length); i++) {
+    if (rows[i].some(c => c.includes('Codigo') && rows[i].some(c2 => c2.includes('Viejo')))) {
+      hdrIdx = i; break;
+    }
+  }
+  if (hdrIdx < 0) throw new Error('No se encontró la fila de encabezados (Codigo Viejo)');
+  const headers = rows[hdrIdx].map(h => h.trim());
+  const dataRows = rows.slice(hdrIdx + 1);
+
+  // Indices de columnas transversales
+  const ci = name => headers.findIndex(h => h === name);
+  const IDX = {
+    sku:    ci('Codigo Viejo') >= 0 ? ci('Codigo Viejo') : 1,
+    base:   ci('C_Nuevo_BASE') >= 0 ? ci('C_Nuevo_BASE') : 2,
+    color:  ci('Color') >= 0 ? ci('Color') : 4,
+    model:  ci('Modelos') >= 0 ? ci('Modelos') : 5,
+    marca:  ci('marca') >= 0 ? ci('marca') : 6,
+    compat: ci('Compat_otro') >= 0 ? ci('Compat_otro') : 13,
+  };
+
+  // Columnas de atributos: header normalizado → atributo DB nombre
+  const atrCols = []; // {colIdx, atrNombre}
+  for (let i = 0; i < headers.length; i++) {
+    const norm = normH(headers[i]);
+    const atrNom = COL_ATR[norm];
+    if (atrNom) atrCols.push({ colIdx: i, atrNombre: atrNom });
+  }
+
+  // 2. Cargar tablas de referencia
+  const norm = s => (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();
+  const [catRes, sgRes, colorRes, atrRes, valRes, modelRes] = await Promise.all([
+    db.query(`SELECT cj.id, cj.nombre, sg.nombre AS sg_nombre
+              FROM categorias_jerarquia cj
+              JOIN subgrupos sg ON sg.id = cj.subgrupo_id
+              WHERE sg.grupo_id = 6 AND cj.activo`),
+    db.query(`SELECT id, nombre FROM subgrupos WHERE grupo_id = 6 AND activo`),
+    db.query(`SELECT id, nombre FROM colores WHERE activo`),
+    db.query(`SELECT id, nombre, tipo FROM atributos WHERE activo`),
+    db.query(`SELECT id, atributo_id, codigo FROM valores_atributo`),
+    db.query(`SELECT m.id, m.nombre FROM modelos_dispositivo m
+              JOIN marcas_dispositivo md ON md.id = m.marca_id
+              WHERE md.nombre ILIKE 'apple'`),
+  ]);
+
+  const colorMap    = new Map(colorRes.rows.map(r => [r.id, r.nombre]));
+  const atrByNombre = new Map(atrRes.rows.map(r => [r.nombre, r]));
+
+  // valMap[atributo_id][codigo] = valor_id
+  const valMap = {};
+  for (const v of valRes.rows) {
+    if (!valMap[v.atributo_id]) valMap[v.atributo_id] = {};
+    valMap[v.atributo_id][v.codigo] = v.id;
+  }
+
+  // modelMap: nombre lower → id  (Apple models)
+  const modelMap = new Map(modelRes.rows.map(r => [r.nombre.toLowerCase(), r.id]));
+
+  // Resolver nombre completo iPhone → modelo DB id
+  const resolveModelo = abbr => {
+    const full = IP[abbr] || IP[abbr.toUpperCase()];
+    if (!full) return null;
+    return modelMap.get(full.toLowerCase()) || null;
+  };
+
+  const resolveModelSet = str => {
+    const ids = new Set();
+    if (!str || str === '0') return ids;
+    for (const part of str.split('|').map(p => p.trim()).filter(Boolean)) {
+      const id = resolveModelo(part);
+      if (id) ids.add(id);
+    }
+    return ids;
+  };
+
+  // 3. Agrupar filas por (sku, base, color)
+  const groups = new Map();
+  for (const row of dataRows) {
+    const sku   = (row[IDX.sku]   || '').trim();
+    const base  = (row[IDX.base]  || '').trim();
+    const color = (row[IDX.color] || '').trim();
+    if (!sku || sku === '0' || !base || base === '0') continue;
+    const key = `${sku}:${base}:${color}`;
+    if (!groups.has(key)) groups.set(key, { row, modeloIds: new Set() });
+    const g = groups.get(key);
+    for (const id of resolveModelSet((row[IDX.model]  || '').trim())) g.modeloIds.add(id);
+    for (const id of resolveModelSet((row[IDX.compat] || '').trim())) g.modeloIds.add(id);
+  }
+
+  // 4. Crear un producto por grupo
+  const creados = [], errores = [];
+  for (const [key, { row, modeloIds }] of groups) {
+    const [sku, base, colorId] = key.split(':');
+    try {
+      // Categoria
+      const catNombre = BASE_CAT[base];
+      const cat = catNombre
+        ? catRes.rows.find(c => norm(c.nombre) === norm(catNombre))
+        : null;
+      const sg = cat
+        ? sgRes.rows.find(s => norm(s.nombre) === norm(cat.sg_nombre || 'Celulares'))
+        : sgRes.rows.find(s => norm(s.nombre) === 'celulares');
+
+      // Color y tipo
+      const colorNombre = colorMap.get(Number(colorId)) || `Color ${colorId}`;
+      const tipo        = BASE_LABEL[base] || 'Funda';
+
+      // Etiqueta de modelos para el nombre (máx. 3)
+      const modelNames = [...modeloIds].slice(0, 3).map(id => {
+        const found = modelRes.rows.find(r => r.id === id);
+        return found ? found.nombre.replace('iPhone ','') : '';
+      }).filter(Boolean);
+      const modelLabel = modelNames.length ? modelNames.join('/') : 'Universal';
+
+      const nombre  = `Funda ${tipo} iPhone ${modelLabel} – ${colorNombre}`;
+      const artSku  = `${base}-${sku}-C${colorId}`;
+      const marcaRaw = (row[IDX.marca] || '').trim();
+      const marca_prod_id = (marcaRaw && marcaRaw !== '0') ? Number(marcaRaw) : null;
+
+      // Atributos
+      const atributos = [];
+      for (const { colIdx, atrNombre } of atrCols) {
+        const rawVal = (row[colIdx] || '').trim();
+        if (!rawVal || rawVal === '0') continue;
+        const atr = atrByNombre.get(atrNombre);
+        if (!atr) continue;
+        if (atr.tipo === 'number') {
+          const n = Number(rawVal);
+          if (n) atributos.push({ atributo_id: atr.id, valor_num: n });
+        } else {
+          // Multi-valor "1|5" → insertar solo el primero (PK única por atributo)
+          const parts = rawVal.split('|').map(p => p.trim()).filter(Boolean);
+          const atrVals = valMap[atr.id] || {};
+          for (const p of parts) {
+            const valor_id = atrVals[p.padStart(3,'0')] || atrVals[p.padStart(2,'0')] || atrVals[p];
+            if (valor_id) {
+              atributos.push({
+                atributo_id: atr.id,
+                valor_id,
+                valor_texto: parts.length > 1 ? rawVal : null,
+              });
+              break;
+            }
+          }
+        }
+      }
+
+      const art = await crearArticulo({
+        nombre, sku: artSku,
+        grupo_id: 6,
+        subgrupo_id: sg?.id || null,
+        categoria_jer_id: cat?.id || null,
+        marca_prod_id,
+      });
+
+      if (atributos.length) await setArticuloAtributos(art.id, atributos);
+      if (modeloIds.size)   await setArticuloModelos(art.id, [...modeloIds]);
+
+      creados.push({ id: art.id, sku: artSku, nombre });
+    } catch (e) {
+      errores.push({ clave: key, error: e.message });
+    }
+  }
+
+  return { ok: true, creados: creados.length, errores, detalle_creados: creados.slice(0,20) };
+}
 
 // Prepara la carpeta de datos: copia los archivos editables si faltan y sincroniza el catalogo si no existe.
 async function prepararDatos() {

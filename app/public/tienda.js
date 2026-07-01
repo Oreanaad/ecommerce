@@ -29,8 +29,8 @@ function precios2(base, grande) {
   </div>`;
 }
 
-function cargarCarrito() { try { return JSON.parse(localStorage.getItem("pasaje_cart") || "[]"); } catch { return []; } }
-function guardarCarrito() { localStorage.setItem("pasaje_cart", JSON.stringify(CART)); }
+function cargarCarrito() { try { return JSON.parse(localStorage.getItem("damia_cart") || "[]"); } catch { return []; } }
+function guardarCarrito() { localStorage.setItem("damia_cart", JSON.stringify(CART)); }
 function toast(m) { const t = $("#t-toast"); t.textContent = m; t.classList.remove("hidden"); clearTimeout(window._tt); window._tt = setTimeout(() => t.classList.add("hidden"), 1800); }
 
 // ---------- Carga ----------
@@ -231,7 +231,7 @@ function renderModal() {
     <div class="t-detalle-img">${imgTag(p)}</div>
     <div class="t-detalle-info">
       <a class="t-volver" id="t-volver">← Volver a la tienda</a>
-      <img class="t-detalle-logo" src="/assets/logo.png" alt="El Pasaje Dental">
+      <img class="t-detalle-logo" src="/assets/logo.png" alt="Punto Damia">
       <h2>${esc(p.nombre)}</h2>
       ${(p.categorias && p.categorias.length) ? `<div class="t-detalle-cats">${p.categorias.map((c) => `<span class="t-detalle-cat">${esc(c)}</span>`).join("")}</div>` : ""}
       <div class="t-detalle-precio">${precios2(precioActual(), true)}</div>
@@ -304,7 +304,7 @@ function verCarritoModal() {
       <div class="t-vc-sub">${precio(i.precio * i.qty)}</div>
     </div>`).join("");
   $("#t-modal-body").innerHTML = `<div class="t-vc">
-    <img class="t-vc-logo" src="/assets/logo.png" alt="El Pasaje Dental">
+    <img class="t-vc-logo" src="/assets/logo.png" alt="Punto Damia">
     <h2>Tu pedido</h2>
     <p class="t-vc-intro">Revisá que esté todo lo que pediste — cantidades y precios — antes de confirmar.</p>
     <div class="t-vc-list">${filas}</div>
@@ -503,7 +503,7 @@ async function enviarCheckout(e) {
         metodo_pago: CO_PAGO, cupon: CO_CUPON ? CO_CUPON.code : "",
       }),
     })).json();
-    if (r.ok && r.pay_url) { localStorage.removeItem("pasaje_cart"); location.href = r.pay_url; return; }
+    if (r.ok && r.pay_url) { localStorage.removeItem("damia_cart"); location.href = r.pay_url; return; }
     toast(r.error || "No se pudo crear el pedido");
   } catch { toast("No se pudo crear el pedido"); }
   btn.disabled = false; btn.textContent = prev;
@@ -565,8 +565,8 @@ init();
   let t = null, i = 0;
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) {
-      let n = 0; try { n = JSON.parse(localStorage.getItem("pasaje_cart") || "[]").reduce((s, x) => s + (x.qty || 0), 0); } catch {}
-      const msgs = n > 0 ? [`🛒 Tenés ${n} en el carrito`, "👋 ¡Volvé a tu compra!", "🦷 El Pasaje Dental"] : ["👋 ¡Volvé!", "🦷 Te esperamos", "✨ El Pasaje Dental"];
+      let n = 0; try { n = JSON.parse(localStorage.getItem("damia_cart") || "[]").reduce((s, x) => s + (x.qty || 0), 0); } catch {}
+      const msgs = n > 0 ? [`🛒 Tenés ${n} en el carrito`, "👋 ¡Volvé a tu compra!", "📱 Punto Damia"] : ["👋 ¡Volvé!", "📱 Accesorios tech", "✨ Punto Damia"];
       t = setInterval(() => { document.title = msgs[i++ % msgs.length]; }, 1100);
     } else { clearInterval(t); t = null; i = 0; document.title = orig; }
   });

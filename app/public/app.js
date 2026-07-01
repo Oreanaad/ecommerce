@@ -2330,22 +2330,27 @@ async function nuevoProducto(prefill, onCreated) {
   prefill = prefill || {};
   if (!CATS_WC) { try { CATS_WC = (await (await fetch("/api/admin/categorias-wc")).json()).categorias || []; } catch { CATS_WC = []; } }
   NP_IMG = Array.isArray(prefill.images) ? [...prefill.images] : [];
-  const catChecks = (CATS_WC || []).map((c) => `<label class="ed-cat"><input type="checkbox" value="${c.id}"> ${esc(c.name)}</label>`).join("");
+  const npGrupoOpts = (CATS_WC || []).map((g) => `<option value="${g.id}">${esc(g.name)}</option>`).join("");
   openModal("➕ Nuevo producto", `
     <label class="ed-l">Nombre *<input id="np-nombre" value="${esc(prefill.nombre || "")}"></label>
     <div class="ed-row2"><label class="ed-l">Precio<input id="np-precio" inputmode="numeric" value="${esc(prefill.precio == null ? "" : prefill.precio)}"></label><label class="ed-l">Existencias (stock)<input id="np-stock" inputmode="numeric" value="${esc(prefill.stock == null ? "" : prefill.stock)}"></label></div>
     <div class="ed-row2"><label class="ed-l">Código / SKU<input id="np-sku" value="${esc(prefill.sku || "")}"></label><label class="ed-l">Peso (kg)<input id="np-peso"></label></div>
     <label class="ed-l">Descripción<textarea id="np-desc" rows="3">${esc(prefill.descripcion || "")}</textarea></label>
-    <div class="ed-l">Categorías<div class="ed-cats">${catChecks || '<span class="meta">—</span>'}</div></div>
+    <div class="ed-row2">
+      <label class="ed-l">Grupo<select id="np-grupo"><option value="">— sin grupo —</option>${npGrupoOpts}</select></label>
+      <label class="ed-l">Subcategoría<select id="np-subgrupo"><option value="">— sin subcategoría —</option></select></label>
+    </div>
     <div class="ed-l">Foto<div class="ed-imgs" id="np-imgs">${NP_IMG.map((im) => `<div class="ed-img"><img src="${esc(im.src)}" alt=""></div>`).join("")}</div><label class="ed-img-add">＋ Subir<input type="file" id="np-file" accept="image/*" hidden></label></div>
     <button class="btn" id="np-guardar">Crear producto</button> <span class="meta" id="np-msg"></span>`);
+  $("#np-grupo").onchange = () => { const g = (CATS_WC || []).find((x) => x.id === Number($("#np-grupo").value)); $("#np-subgrupo").innerHTML = `<option value="">— sin subcategoría —</option>` + (g?.hijas || []).map((s) => `<option value="${s.id}">${esc(s.name)}</option>`).join(""); };
   $("#np-file").onchange = async (e) => { const f = e.target.files[0]; if (!f) return; const url = await subirImagen(f); if (url) { NP_IMG.push({ src: url }); $("#np-imgs").innerHTML = NP_IMG.map((im) => `<div class="ed-img"><img src="${esc(im.src)}" alt=""></div>`).join(""); } };
   $("#np-guardar").onclick = async () => {
     const nombre = $("#np-nombre").value.trim(); if (!nombre) return toast("Poné el nombre");
-    const cats = [...document.querySelectorAll(".ed-cats input:checked")].map((c) => Number(c.value));
+    const grupo_id = Number($("#np-grupo").value) || null;
+    const subgrupo_id = Number($("#np-subgrupo").value) || null;
     const sku = $("#np-sku").value.trim(), stock = Number($("#np-stock").value) || 0, precio = $("#np-precio").value;
     const btn = $("#np-guardar"); btn.disabled = true; $("#np-msg").textContent = "Creando…";
-    const r = await api("/api/admin/producto-nuevo", { nombre, precio, stock: $("#np-stock").value, sku, peso: $("#np-peso").value.trim(), descripcion: $("#np-desc").value.trim(), categorias: cats, images: NP_IMG });
+    const r = await api("/api/admin/producto-nuevo", { nombre, precio, stock: $("#np-stock").value, sku, peso: $("#np-peso").value.trim(), descripcion: $("#np-desc").value.trim(), grupo_id, subgrupo_id, images: NP_IMG });
     btn.disabled = false;
     if (r && r.ok) {
       toast("✅ Producto creado"); closeModal();
@@ -2377,7 +2382,9 @@ function renderEditorProducto(p) {
           <button class="btn ghost sm" data-vfoto="${i}">📷 Foto</button><button class="btn sm" data-vsave="${i}">Guardar</button></div>
       </div></div>`).join("");
   const slotOpts = (DATA.muebles.muebles || []).map((m) => `<optgroup label="${esc(m.nombre)}">${m.secciones.flatMap((s) => s.slots.map((sl) => `<option value="${sl.id}">${esc(sl.label)}</option>`)).join("")}</optgroup>`).join("");
-  const catChecks = (CATS_WC || []).map((c) => `<label class="ed-cat"><input type="checkbox" value="${c.id}" ${(p.categorias || []).some((pc) => pc.id === c.id) ? "checked" : ""}> ${esc(c.name)}</label>`).join("");
+  const grupoOpts = (CATS_WC || []).map((g) => `<option value="${g.id}" ${g.id === p.grupo_id ? "selected" : ""}>${esc(g.name)}</option>`).join("");
+  const subgrupoActual = (CATS_WC || []).find((g) => g.id === p.grupo_id);
+  const subOpts = (subgrupoActual?.hijas || []).map((s) => `<option value="${s.id}" ${s.id === p.subgrupo_id ? "selected" : ""}>${esc(s.name)}</option>`).join("");
   $("#modal-body").innerHTML = `
     <label class="ed-l">Nombre<input id="ed-nombre" value="${esc(p.nombre)}"></label>
     <label class="ed-l">Código (SKU)<input id="ed-sku" value="${esc(p.sku || "")}" placeholder="código de barras / interno — ponéselo a los duplicados"></label>
@@ -2389,7 +2396,10 @@ function renderEditorProducto(p) {
     <div class="ed-row2"><label class="ed-l">Largo (cm)<input id="ed-largo" value="${esc((p.dimensiones || {}).length || "")}" inputmode="decimal"></label><label class="ed-l">Ancho (cm)<input id="ed-ancho" value="${esc((p.dimensiones || {}).width || "")}" inputmode="decimal"></label><label class="ed-l">Alto (cm)<input id="ed-alto" value="${esc((p.dimensiones || {}).height || "")}" inputmode="decimal"></label></div>
     <label class="ed-l">Descripción corta<textarea id="ed-corta" rows="2">${esc(sinHtml(p.descripcion_corta))}</textarea></label>
     <label class="ed-l">Descripción<textarea id="ed-desc" rows="5">${esc(sinHtml(p.descripcion))}</textarea></label>
-    <div class="ed-l">Categorías<div class="ed-cats">${catChecks || '<span class="meta">—</span>'}</div></div>
+    <div class="ed-row2">
+      <label class="ed-l">Grupo<select id="ed-grupo"><option value="">— sin grupo —</option>${grupoOpts}</select></label>
+      <label class="ed-l">Subcategoría<select id="ed-subgrupo"><option value="">— sin subcategoría —</option>${subOpts}</select></label>
+    </div>
     <div class="ed-l">Ubicaciones en el local<div id="ed-ubic"></div>
       <div class="ed-ubic-add"><select id="ed-ubic-slot"><option value="">Elegí un lugar…</option>${slotOpts}</select> <input id="ed-ubic-cant" type="number" min="0" placeholder="cant" style="width:64px"><button class="btn ghost sm" id="ed-ubic-add-btn">Agregar acá</button></div>
     </div>
@@ -2410,6 +2420,13 @@ function renderEditorProducto(p) {
   const edMargen = () => { const c = Number($("#ed-costo") && $("#ed-costo").value) || 0, pr = Number($("#ed-precio") && $("#ed-precio").value) || 0; const el = $("#ed-margen"); if (el) el.innerHTML = (c && pr) ? `Margen: <b>${Math.round((1 - c / pr) * 100)}%</b> · utilidad ${fmtAR(pr - c)}` : "Cargá costo y precio para ver el margen."; };
   if ($("#ed-costo")) $("#ed-costo").oninput = edMargen;
   if ($("#ed-precio")) $("#ed-precio").oninput = edMargen;
+  // Cascada grupo → subgrupo
+  if ($("#ed-grupo")) $("#ed-grupo").onchange = () => {
+    const gid = Number($("#ed-grupo").value) || null;
+    const g = (CATS_WC || []).find((x) => x.id === gid);
+    const hijas = g?.hijas || [];
+    $("#ed-subgrupo").innerHTML = `<option value="">— sin subcategoría —</option>` + hijas.map((s) => `<option value="${s.id}">${esc(s.name)}</option>`).join("");
+  };
   $("#ed-duplicar").onclick = async () => {
     if (!confirm("¿Duplicar este producto? Se crea una copia (con sus variaciones) que después podés editar.")) return;
     const btn = $("#ed-duplicar"); btn.disabled = true; $("#ed-msg").textContent = "Duplicando…";
@@ -2473,8 +2490,9 @@ async function subirImagen(file) {
 }
 async function guardarProducto() {
   const p = PROD_EDIT, btn = $("#ed-guardar"); btn.disabled = true; $("#ed-msg").textContent = "Guardando…";
-  const categorias = [...document.querySelectorAll(".ed-cats input:checked")].map((c) => Number(c.value));
-  const body = { id: p.id, nombre: $("#ed-nombre").value.trim(), sku: $("#ed-sku") ? $("#ed-sku").value.trim() : undefined, descripcion_corta: $("#ed-corta").value.trim(), descripcion: $("#ed-desc").value.trim(), images: p.images, peso: $("#ed-peso") ? $("#ed-peso").value.trim() : "", slug: $("#ed-slug") ? $("#ed-slug").value.trim() : "", categorias, dimensiones: { length: $("#ed-largo") ? $("#ed-largo").value.trim() : "", width: $("#ed-ancho") ? $("#ed-ancho").value.trim() : "", height: $("#ed-alto") ? $("#ed-alto").value.trim() : "" } };
+  const grupo_id = $("#ed-grupo") ? (Number($("#ed-grupo").value) || null) : undefined;
+  const subgrupo_id = $("#ed-subgrupo") ? (Number($("#ed-subgrupo").value) || null) : undefined;
+  const body = { id: p.id, nombre: $("#ed-nombre").value.trim(), sku: $("#ed-sku") ? $("#ed-sku").value.trim() : undefined, descripcion_corta: $("#ed-corta").value.trim(), descripcion: $("#ed-desc").value.trim(), images: p.images, peso: $("#ed-peso") ? $("#ed-peso").value.trim() : "", slug: $("#ed-slug") ? $("#ed-slug").value.trim() : "", grupo_id, subgrupo_id, dimensiones: { length: $("#ed-largo") ? $("#ed-largo").value.trim() : "", width: $("#ed-ancho") ? $("#ed-ancho").value.trim() : "", height: $("#ed-alto") ? $("#ed-alto").value.trim() : "" } };
   if ($("#ed-precio")) body.precio = $("#ed-precio").value;
   if ($("#ed-stock")) body.stock = $("#ed-stock").value;
   if ($("#ed-costo")) body.costo = $("#ed-costo").value;
@@ -4558,6 +4576,145 @@ $("#art-form").onsubmit = async (e) => {
 // Cerrar sesión
 const btnSalir = $("#btn-salir");
 if (btnSalir) btnSalir.onclick = async () => { await fetch("/api/auth/salir", { method: "POST" }); location.href = "/ingresar"; };
+
+// ─── IMPORTAR ARTÍCULOS DESDE CSV ────────────────────────────────────────────
+{
+  const btnImp = $("#art-importar-btn");
+  const modal  = $("#art-import-modal");
+  const cerrar = $("#art-import-cerrar");
+  const fileIn = $("#art-import-file");
+  const preview = $("#art-import-preview");
+  const btnOk  = $("#art-import-ok");
+  const status = $("#art-import-status");
+  const tpl    = $("#art-import-tpl");
+  if (btnImp && modal) {
+    const HEADERS = ["nombre","sku","precio","precio_costo","stock","grupo","subgrupo","marca","descripcion","imagen"];
+    let parsed = [];
+
+    // Plantilla CSV para descargar
+    if (tpl) tpl.onclick = (e) => {
+      e.preventDefault();
+      const row = HEADERS.join(",") + "\n" + '"Funda iPhone 15 Transparente","F-IP15",8500,3000,25,"Fundas","Fundas iPhone","Generic","Descripción",""\n';
+      const blob = new Blob([row], { type: "text/csv" });
+      const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "plantilla-articulos.csv"; a.click();
+    };
+
+    // Parseo CSV (maneja comillas y comas dentro de campos)
+    function parseCSV(text) {
+      const lines = text.replace(/\r/g,"").split("\n").filter(l => l.trim());
+      if (lines.length < 2) return [];
+      const heads = lines[0].split(",").map(h => h.replace(/^"|"$/g,"").trim().toLowerCase());
+      const rows = [];
+      for (let i = 1; i < lines.length; i++) {
+        const vals = []; let cur = "", inQ = false;
+        for (const ch of lines[i] + ",") {
+          if (ch === '"') { inQ = !inQ; }
+          else if (ch === "," && !inQ) { vals.push(cur.trim()); cur = ""; }
+          else { cur += ch; }
+        }
+        if (vals.length < 2) continue;
+        const obj = {};
+        heads.forEach((h, idx) => { obj[h] = vals[idx] || ""; });
+        if (obj.nombre) rows.push(obj);
+      }
+      return rows;
+    }
+
+    btnImp.onclick = () => modal.classList.remove("hidden");
+    cerrar.onclick = () => { modal.classList.add("hidden"); parsed = []; preview.innerHTML = ""; btnOk.disabled = true; status.textContent = ""; };
+
+    fileIn.onchange = (e) => {
+      const f = e.target.files[0]; if (!f) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        parsed = parseCSV(ev.target.result);
+        if (!parsed.length) { preview.innerHTML = '<p class="meta">No se encontraron filas válidas.</p>'; btnOk.disabled = true; return; }
+        const cols = ["nombre","sku","precio","stock","grupo","subgrupo","marca"];
+        preview.innerHTML = `<p class="meta">${parsed.length} artículos listos para importar.</p>
+          <div style="max-height:200px;overflow-y:auto">
+            <table style="width:100%;font-size:12px;border-collapse:collapse">
+              <thead><tr>${cols.map(c=>`<th style="text-align:left;padding:4px 8px;border-bottom:1px solid #eee">${c}</th>`).join("")}</tr></thead>
+              <tbody>${parsed.slice(0,20).map(r=>`<tr>${cols.map(c=>`<td style="padding:3px 8px;border-bottom:1px solid #f3f4f6">${esc(r[c]||"")}</td>`).join("")}</tr>`).join("")}</tbody>
+            </table>
+          </div>`;
+        btnOk.disabled = false;
+        status.textContent = "";
+      };
+      reader.readAsText(f);
+    };
+
+    btnOk.onclick = async () => {
+      if (!parsed.length) return;
+      btnOk.disabled = true; status.textContent = "Importando…";
+      try {
+        const r = await api("/api/admin/articulos/importar", { articulos: parsed });
+        status.textContent = `✓ ${r.creados} creados${r.errores?.length ? ` · ${r.errores.length} con error` : ""}`;
+        if (r.errores?.length) console.warn("[importar]", r.errores);
+        await artCargarLista();
+      } catch (e) { status.textContent = "Error: " + e.message; btnOk.disabled = false; }
+    };
+  }
+}
+
+// ─── IMPORTAR VINCULACIONES ───────────────────────────────────────────────────
+{
+  const btn    = $("#art-vinc-btn");
+  const modal  = $("#art-vinc-modal");
+  const cerrar = $("#art-vinc-cerrar");
+  const fileIn = $("#art-vinc-file");
+  const prev   = $("#art-vinc-preview");
+  const btnOk  = $("#art-vinc-ok");
+  const status = $("#art-vinc-status");
+
+  if (btn && modal) {
+    let csvText = "";
+
+    btn.onclick = () => modal.classList.remove("hidden");
+    cerrar.onclick = () => {
+      modal.classList.add("hidden");
+      csvText = ""; prev.innerHTML = ""; btnOk.disabled = true; status.textContent = "";
+      fileIn.value = "";
+    };
+
+    fileIn.onchange = (e) => {
+      const f = e.target.files[0]; if (!f) return;
+      status.textContent = "";
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        csvText = ev.target.result;
+        // Vista previa rápida: contar filas de datos (saltar primeras 4)
+        const lines = csvText.replace(/\r/g,"").split("\n").filter(l => l.trim());
+        const dataLines = lines.slice(4).filter(l => {
+          const parts = l.split(",");
+          return parts[1] && parts[1].trim() !== "0" && parts[1].trim() !== "";
+        });
+        // Contar combinaciones únicas (sku:base:color)
+        const uniq = new Set(dataLines.map(l => {
+          const p = l.split(",");
+          return `${(p[1]||"").trim()}:${(p[2]||"").trim()}:${(p[4]||"").trim()}`;
+        }));
+        prev.innerHTML = `<p class="meta">📄 ${f.name} · ${dataLines.length} filas de datos · ~${uniq.size} productos únicos (por SKU/tipo/color)</p>`;
+        btnOk.disabled = false;
+      };
+      reader.readAsText(f, "utf-8");
+    };
+
+    btnOk.onclick = async () => {
+      if (!csvText) return;
+      btnOk.disabled = true;
+      status.textContent = "Importando…";
+      try {
+        const r = await api("/api/admin/articulos/importar-vinculaciones", { csv: csvText });
+        status.textContent = `✓ ${r.creados} productos creados${r.errores?.length ? ` · ${r.errores.length} errores` : ""}`;
+        if (r.errores?.length) console.warn("[vinc]", r.errores);
+        if (r.creados > 0) await artCargarLista();
+      } catch (e) {
+        status.textContent = "Error: " + e.message;
+        btnOk.disabled = false;
+      }
+    };
+  }
+}
 
 // Carga inicial resiliente: reintenta si /api/data falla/tarda, y al terminar re-renderiza la pestaña
 // activa por si se abrió antes de que llegaran los datos (evita combos/mapa vacíos).
