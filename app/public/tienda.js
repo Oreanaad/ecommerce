@@ -348,6 +348,38 @@ async function aplicarCupon() {
 
 function checkout() {
   if (!CART.length) return;
+
+  // Verificar stock antes de mostrar el formulario
+  const sinStock = CART.filter(i => {
+    const prod = PRODS.find(p => p.id === i.id);
+    if (!prod) return false; // producto cargado fuera del catálogo, no bloquear
+    const obj = i.variationId ? (prod.variaciones || []).find(v => v.id === i.variationId) : prod;
+    return obj && !hayStock(obj);
+  });
+  if (sinStock.length) {
+    const lista = sinStock.map(i => `<li>${esc(i.nombre)}${i.label ? ` · ${esc(i.label)}` : ""}</li>`).join("");
+    $("#t-modal-body").innerHTML = `<div class="t-co" style="grid-column:1/-1">
+      <h2>⚠️ Productos sin stock</h2>
+      <p style="color:var(--text-mid);margin-bottom:16px">Estos artículos ya no tienen stock disponible:</p>
+      <ul style="margin:0 0 24px;padding-left:20px;color:var(--text-mid);line-height:1.8">${lista}</ul>
+      <button class="t-btn-grande" id="t-co-quitar">Quitar del carrito y continuar</button>
+      <button class="t-btn-grande t-btn-sec" style="margin-top:10px" id="t-co-volver">Volver al carrito</button>
+    </div>`;
+    VC_OPEN = false;
+    $("#t-cart").classList.add("hidden");
+    $("#t-modal").classList.remove("hidden");
+    window.scrollTo(0, 0);
+    $("#t-co-quitar").onclick = () => {
+      const claves = new Set(sinStock.map(i => i.key));
+      CART = CART.filter(i => !claves.has(i.key));
+      guardarCarrito(); renderCarrito();
+      cerrarProducto();
+      if (CART.length) checkout();
+    };
+    $("#t-co-volver").onclick = () => { cerrarProducto(); $("#t-cart").classList.remove("hidden"); };
+    return;
+  }
+
   CO_RATE = null; CO_PAGO = "transferencia"; CO_CUPON = null;
   CO_PROD = CART.reduce((s, i) => s + i.precio * i.qty, 0);
   const items = CART.map((i) => `<div class="t-co-item"><span>${i.qty}× ${esc(i.nombre)}${i.label ? " · " + esc(i.label) : ""}</span><b>${precio(i.precio * i.qty)}</b></div>`).join("");
