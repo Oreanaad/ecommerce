@@ -46,6 +46,11 @@ const COLOR = {
   61:'Camel',62:'White gold',63:'Visón',
 };
 
+// Frases de categoría/subgrupo que no deben aparecer en el nombre del producto
+const PREFIJOS_CATEGORIA = [
+  'Artículos de Temporada','Bazar LifeStyle','Content Creator','Juguetería','Tecnologías',
+];
+
 // Todos los tipos (mayor a menor longitud para que los compuestos tengan prioridad)
 const ALL_TIPOS = [...new Set([...Object.values(TIPO), ...Object.values(TIPO2)])]
   .sort((a, b) => b.length - a.length);
@@ -95,9 +100,15 @@ function construirNombre(sku, nombreActual) {
 
   const color = p.colorId != null ? (COLOR[p.colorId] ?? '') : '';
 
+  // Limpiar prefijos de categoría del nombre original antes de procesar
+  let nombreLimpio = nombreActual;
+  for (const cat of PREFIJOS_CATEGORIA) {
+    nombreLimpio = nombreLimpio.replace(new RegExp(cat + '\\s*', 'gi'), '').trim();
+  }
+
   // Partir por " – " para separar dispositivo de color
-  const sep = nombreActual.includes(' – ') ? ' – ' : (nombreActual.includes(' - ') ? ' - ' : null);
-  const leftPart = sep ? nombreActual.split(sep)[0] : nombreActual;
+  const sep = nombreLimpio.includes(' – ') ? ' – ' : (nombreLimpio.includes(' - ') ? ' - ' : null);
+  const leftPart = sep ? nombreLimpio.split(sep)[0] : nombreLimpio;
 
   const dispositivo = extractDevice(tipo, leftPart);
 
