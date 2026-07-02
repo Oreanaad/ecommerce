@@ -206,13 +206,16 @@ function card(p) {
   const stock = hayStock(p);
   const esVar = p.tipo === "variable" && (p.variaciones || []).length;
   const tags = (p.categorias || []).slice(0, 2).map((c) => `<span class="t-tag">${esc(c)}</span>`).join("");
+  const btnLabel = esVar ? "Ver opciones" : "+";
   return `<div class="t-card" data-prod="${p.id}">
     <div class="t-card-img">${imgTag(p)}</div>
     <div class="t-card-body">
       ${tags ? `<div class="t-tags">${tags}</div>` : ""}
       <div class="t-card-name">${esc(p.nombre)}</div>
-      ${precios2(p.precio)}
-      <button class="t-add" data-add="${p.id}" ${stock ? "" : "disabled"}>${esVar ? "Ver opciones" : "Agregar al carrito"}</button>
+      <div class="t-card-foot">
+        ${precios2(p.precio)}
+        <button class="t-add${esVar ? " t-add-var" : ""}" data-add="${p.id}" ${stock ? "" : "disabled"}>${btnLabel}</button>
+      </div>
     </div>
   </div>`;
 }
