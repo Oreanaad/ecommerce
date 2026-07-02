@@ -22,21 +22,13 @@ a { color: inherit; text-decoration: none; }
 .t-logo { display: flex; align-items: center; flex-shrink: 0; }
 .t-logo-img { height: 42px; width: auto; }
 .t-logo-txt { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 22px; color: #fff; }
-.t-search { position: relative; }
-.t-search-nav { flex: 1; max-width: 560px; display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,.18); border: 1.5px solid rgba(255,255,255,.35); border-radius: 100px; padding: 9px 20px; transition: background .2s, border-color .2s; }
-.t-search-nav:focus-within { background: rgba(255,255,255,.26); border-color: rgba(255,255,255,.7); }
-.t-search-nav svg { color: rgba(255,255,255,.8); flex-shrink: 0; }
-.t-search-nav input { flex: 1; border: none; outline: none; font-size: 14px; font-family: inherit; color: #fff; background: transparent; }
-.t-search-nav input::placeholder { color: rgba(255,255,255,.65); }
-.t-nav-links { display: flex; align-items: center; gap: 22px; list-style: none; margin: 0 8px 0 0; }
+.t-nav-links { display: flex; align-items: center; gap: 22px; list-style: none; margin: 0 8px 0 0; margin-left: auto; }
 .t-nav-links a { color: rgba(255,255,255,.9); font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; gap: 5px; transition: color .2s; }
 .t-nav-links a:hover { color: #fff; }
-.t-nav-ig { color: rgba(255,255,255,.9); }
 @media (max-width: 860px) {
-  .t-nav { padding: 10px 14px; gap: 10px; flex-wrap: wrap; }
-  .t-search { flex: 1 1 100%; order: 3; max-width: none; margin-right: 0; }
+  .t-nav { padding: 10px 14px; gap: 10px; }
   .t-logo-img { height: 36px; }
-  .t-nav-links { gap: 14px; margin: 0; }
+  .t-nav-links { gap: 14px; margin: 0; margin-left: auto; }
   .t-nav-links .solo-desktop { display: none; }
   .t-nav-login { font-size: 0 !important; }
   .t-nav-login::before { content: "👤"; font-size: 18px; }
@@ -92,13 +84,27 @@ a { color: inherit; text-decoration: none; }
 
 /* HERO */
 .t-hero { width: 100%; background: linear-gradient(140deg, #C2E0F4 0%, #A8D4ED 100%); position: relative; overflow: hidden; }
-.t-hero-inner { max-width: 1200px; margin: 0 auto; padding: 52px 24px 56px; display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: center; }
+.t-hero-inner { max-width: 1200px; margin: 0 auto; padding: 48px 24px 52px; display: flex; flex-direction: column; gap: 32px; }
+.t-hero-top { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: center; }
 .t-store-title { font-family: 'Playfair Display', Georgia, serif; font-size: clamp(72px, 10vw, 130px); font-weight: 700; letter-spacing: .04em; line-height: .9; text-transform: uppercase; background: linear-gradient(180deg, #2D74BC 0%, #113F67 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-.t-store-intro { }
 .t-store-intro p { font-size: 19px; font-weight: 600; color: #1d1d1f; line-height: 1.35; margin-bottom: 16px; }
 .t-store-intro a { display: block; color: var(--brand-500); font-size: 15px; font-weight: 600; margin-bottom: 6px; transition: color .15s; }
 .t-store-intro a:hover { color: var(--brand-800); }
-@media (max-width: 680px) { .t-hero-inner { grid-template-columns: 1fr; gap: 16px; padding: 36px 20px 32px; } .t-store-title { font-size: 72px; } .t-store-intro p { font-size: 16px; } }
+/* BARRA DE BÚSQUEDA EN HERO */
+.t-search { position: relative; }
+.t-search-hero { display: flex; align-items: center; gap: 12px; background: rgba(255,255,255,.82); border: 2px solid rgba(255,255,255,.95); border-radius: 100px; padding: 14px 26px; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); transition: background .2s; }
+.t-search-hero:focus-within { background: rgba(255,255,255,.96); }
+.t-search-hero svg { color: var(--brand-500); flex-shrink: 0; }
+.t-search-hero input { flex: 1; border: none; outline: none; font-size: 16px; font-family: inherit; color: var(--text-dark); background: transparent; }
+.t-search-hero input::placeholder { color: var(--text-light); }
+@media (max-width: 680px) {
+  .t-hero-inner { gap: 24px; padding: 32px 20px 28px; }
+  .t-hero-top { grid-template-columns: 1fr; gap: 16px; }
+  .t-store-title { font-size: 72px; }
+  .t-store-intro p { font-size: 16px; }
+  .t-search-hero { padding: 12px 20px; }
+  .t-search-hero input { font-size: 15px; }
+}
 
 main { width: 100%; }
 .t-contenido { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
